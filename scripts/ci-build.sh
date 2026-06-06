@@ -6,12 +6,21 @@ TRIPLE="${1:?triple required}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD="$ROOT/build-${TRIPLE}"
 VERSION="1.0.0"
-VCPKG_ROOT="$(cd "${VCPKG_ROOT:-$ROOT/vcpkg}" && pwd)"
 TOOLCHAIN="$ROOT/cmake/vcpkg-init.cmake"
 OVERLAY="$ROOT/triplets"
 
-export VCPKG_ROOT
 unset CMAKE_TOOLCHAIN_FILE
+
+vcpkg_root() {
+    if [ -n "${VCPKG_ROOT:-}" ] && [ -d "$VCPKG_ROOT" ]; then
+        cd "$VCPKG_ROOT" && pwd
+    elif [ -d "$ROOT/vcpkg" ]; then
+        cd "$ROOT/vcpkg" && pwd
+    else
+        echo "vcpkg directory not found (set VCPKG_ROOT or run Setup vcpkg)" >&2
+        return 1
+    fi
+}
 
 CMAKE_NATIVE=(
     -G Ninja
@@ -29,6 +38,8 @@ build_native() {
 build_vcpkg() {
     local triplet="$1"
     shift
+    VCPKG_ROOT="$(vcpkg_root)"
+    export VCPKG_ROOT
     [ -f "$TOOLCHAIN" ] || { echo "Missing toolchain: $TOOLCHAIN"; exit 1; }
     rm -rf "$BUILD"
     cmake -S "$ROOT" -B "$BUILD" -G Ninja \

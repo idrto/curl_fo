@@ -107,7 +107,9 @@ jobs:
           chmod +x scripts/*.sh
           mkdir -p dist
           rm -f dist/checksums.txt
-          export VCPKG_ROOT="${{ github.workspace }}/vcpkg"
+          if [ "${{ matrix.setup }}" = "windows-msvc" ] || [ "${{ matrix.setup }}" = "vcpkg-mobile" ]; then
+            export VCPKG_ROOT="${{ github.workspace }}/vcpkg"
+          fi
           bash scripts/ci-build.sh "${{ matrix.triple }}"
 
       - name: Upload triple artifact
