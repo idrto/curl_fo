@@ -10,6 +10,8 @@ typedef struct cf_curl_shadow {
     int               has_method;
     struct curl_slist  *headers;
     char              *postfields;
+    char              proxy[4096];
+    int               has_proxy;
 } cf_curl_shadow;
 
 cf_curl_shadow *cf_shadow_get(CURL *curl)
@@ -86,6 +88,27 @@ const char *cf_shadow_get_postfields(CURL *curl)
     cf_curl_shadow *s = NULL;
     if (cf_curl_easy_getinfo(curl, CURLINFO_PRIVATE, &s) == CURLE_OK && s)
         return s->postfields;
+    return NULL;
+}
+
+void cf_shadow_set_proxy(CURL *curl, const char *proxy)
+{
+    cf_curl_shadow *s = cf_shadow_get(curl);
+    if (!s) return;
+    if (proxy && proxy[0]) {
+        strncpy(s->proxy, proxy, sizeof(s->proxy) - 1);
+        s->has_proxy = 1;
+    } else {
+        s->proxy[0] = '\0';
+        s->has_proxy = 0;
+    }
+}
+
+const char *cf_shadow_get_proxy(CURL *curl)
+{
+    cf_curl_shadow *s = NULL;
+    if (cf_curl_easy_getinfo(curl, CURLINFO_PRIVATE, &s) == CURLE_OK && s && s->has_proxy)
+        return s->proxy;
     return NULL;
 }
 

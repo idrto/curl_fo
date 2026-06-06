@@ -25,6 +25,23 @@ int test_util_run(void)
                         &port, &https, &ws) == 0);
     ASSERT(ws == 1 && https == 1 && port == 443);
 
+    ASSERT(cf_parse_url("https://[2001:db8::1]/path", host, sizeof(host),
+                        &port, &https, &ws) == 0);
+    ASSERT(strcmp(host, "2001:db8::1") == 0);
+    ASSERT(port == 443);
+
+    ASSERT(cf_parse_url("http://[::1]:8080/api", host, sizeof(host),
+                        &port, &https, &ws) == 0);
+    ASSERT(strcmp(host, "::1") == 0);
+    ASSERT(port == 8080);
+
+    char uuid1[48];
+    char uuid2[48];
+    cf_generate_uuid(uuid1, sizeof(uuid1));
+    cf_generate_uuid(uuid2, sizeof(uuid2));
+    ASSERT(strlen(uuid1) == 36);
+    ASSERT(strcmp(uuid1, uuid2) != 0);
+
     cf_config *cfg = cf_config_create();
     ASSERT(cfg != NULL);
     ASSERT(cf_config_get_lru_capacity(cfg) == 500);

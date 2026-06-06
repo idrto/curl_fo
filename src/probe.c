@@ -96,15 +96,41 @@ static int cf_tcp_connect_latency(const char *addr, uint16_t port,
 #endif
     uint64_t elapsed = cf_now_ms() - start;
 
+    if (prc <= 0) {
 #ifdef _WIN32
-    closesocket(sock);
+        closesocket(sock);
 #else
-    close(sock);
+        close(sock);
+#endif
+        freeaddrinfo(res);
+        return -1;
+    }
+
+    int so_err = 0;
+#ifdef _WIN32
+    {
+        int slen = (int)sizeof(so_err);
+        if (getsockopt(sock, SOL_SOCKET, SO_ERROR, (char *)&so_err, &slen) != 0
+            || so_err != 0) {
+            closesocket(sock);
+            freeaddrinfo(res);
+            return -1;
+        }
+        closesocket(sock);
+    }
+#else
+    {
+        socklen_t slen = (socklen_t)sizeof(so_err);
+        if (getsockopt(sock, SOL_SOCKET, SO_ERROR, &so_err, &slen) != 0
+            || so_err != 0) {
+            close(sock);
+            freeaddrinfo(res);
+            return -1;
+        }
+        close(sock);
+    }
 #endif
     freeaddrinfo(res);
-
-    if (prc <= 0)
-        return -1;
 
     *raw_ms = (unsigned)elapsed;
     return 0;

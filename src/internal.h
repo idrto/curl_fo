@@ -32,6 +32,8 @@ typedef struct cf_dns_entry {
     uint32_t       ttl_sec;
     uint64_t       resolved_at_ms;
     uint64_t       expires_at_ms;
+    unsigned       refs;        /* in-flight users; entry freed when 0 and evicted */
+    bool           evicted;     /* unlinked from cache, pending free on last unref */
     /* LRU + hash linkage */
     struct cf_dns_entry *lru_prev;
     struct cf_dns_entry *lru_next;
@@ -87,6 +89,7 @@ void          cf_cache_insert(cf_ctx *ctx, cf_dns_entry *entry);
 void          cf_cache_remove(cf_ctx *ctx, cf_dns_entry *entry);
 void          cf_cache_touch(cf_ctx *ctx, cf_dns_entry *entry);
 cf_dns_entry *cf_resolve_host(cf_ctx *ctx, const char *host, uint16_t port);
+void          cf_dns_entry_unref(cf_ctx *ctx, cf_dns_entry *entry);
 
 /* ── Probe ───────────────────────────────────────────────────────────── */
 
@@ -125,6 +128,8 @@ void          cf_shadow_set_headers(CURL *curl, struct curl_slist *headers);
 struct curl_slist *cf_shadow_get_headers(CURL *curl);
 void          cf_shadow_set_postfields(CURL *curl, const char *data);
 const char   *cf_shadow_get_postfields(CURL *curl);
+void          cf_shadow_set_proxy(CURL *curl, const char *proxy);
+const char   *cf_shadow_get_proxy(CURL *curl);
 
 /* Verbose logging (stderr, gated by cfg->verbose) */
 void cf_vlog(cf_config *cfg, const char *fmt, ...);

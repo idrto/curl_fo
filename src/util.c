@@ -10,8 +10,14 @@
 #    define WIN32_LEAN_AND_MEAN
 #  endif
 #  include <windows.h>
+#  include <wincrypt.h>
 #else
+#  include <fcntl.h>
 #  include <pthread.h>
+#  include <unistd.h>
+#  if defined(__linux__) || defined(__ANDROID__)
+#    include <sys/random.h>
+#  endif
 #endif
 
 uint64_t cf_now_ms(void)
@@ -30,19 +36,61 @@ uint64_t cf_now_ms(void)
 #endif
 }
 
+static int cf_fill_random(unsigned char *buf, size_t len)
+{
+#ifdef _WIN32
+    HCRYPTPROV prov = 0;
+    if (!CryptAcquireContextA(&prov, NULL, NULL, PROV_RSA_FULL,
+                              CRYPT_VERIFYCONTEXT))
+        return -1;
+    int ok = CryptGenRandom(prov, (DWORD)len, buf) ? 0 : -1;
+    CryptReleaseContext(prov, 0);
+    return ok;
+#else
+    size_t off = 0;
+    while (off < len) {
+        ssize_t n = -1;
+#  if defined(__linux__) || defined(__ANDROID__)
+        n = getrandom(buf + off, len - off, 0);
+#  endif
+        if (n <= 0) {
+            int fd = open("/dev/urandom", O_RDONLY);
+            if (fd < 0)
+                return -1;
+            n = read(fd, buf + off, len - off);
+            close(fd);
+            if (n <= 0)
+                return -1;
+        }
+        off += (size_t)n;
+    }
+    return 0;
+#endif
+}
+
 void cf_generate_uuid(char *buf, size_t buflen)
 {
-    static int seeded;
-    if (!seeded) {
-        srand((unsigned)cf_now_ms() ^ (unsigned)(uintptr_t)buf);
-        seeded = 1;
+    unsigned char rnd[16];
+    if (cf_fill_random(rnd, sizeof(rnd)) < 0) {
+        uint64_t t = cf_now_ms();
+        memcpy(rnd, &t, sizeof(t));
+        memcpy(rnd + 8, &buf, sizeof(buf));
     }
+    rnd[6] = (unsigned char)((rnd[6] & 0x0fu) | 0x40u);
+    rnd[8] = (unsigned char)((rnd[8] & 0x3fu) | 0x80u);
     snprintf(buf, buflen,
-             "%08x-%04x-%4x-%04x-%012llx",
-             (unsigned)rand(), (unsigned)(rand() & 0xFFFF),
-             (unsigned)((rand() & 0x0FFF) | 0x4000),
-             (unsigned)((rand() & 0x3FFF) | 0x8000),
-             (unsigned long long)((rand() & 0xFFFFFFFFFFFFULL)));
+             "%08x-%04x-%04x-%04x-%012llx",
+             (unsigned)((rnd[0] << 24) | (rnd[1] << 16) | (rnd[2] << 8) | rnd[3]),
+             (unsigned)((rnd[4] << 8) | rnd[5]),
+             (unsigned)((rnd[6] << 8) | rnd[7]),
+             (unsigned)((rnd[8] << 8) | rnd[9]),
+             (unsigned long long)(
+                 ((unsigned long long)rnd[10] << 40) |
+                 ((unsigned long long)rnd[11] << 32) |
+                 ((unsigned long long)rnd[12] << 24) |
+                 ((unsigned long long)rnd[13] << 16) |
+                 ((unsigned long long)rnd[14] << 8) |
+                 (unsigned long long)rnd[15]));
 }
 
 int cf_parse_url(const char *url, char *host, size_t hostlen,
@@ -79,30 +127,37 @@ int cf_parse_url(const char *url, char *host, size_t hostlen,
     if (at && at < end)
         p = at + 1;
 
-    const char *colon = memchr(p, ':', (size_t)(end - p));
+    const char *host_start = p;
     size_t hlen;
-    if (colon && colon < end) {
-        hlen = (size_t)(colon - p);
-        int prt = atoi(colon + 1);
-        if (prt > 0 && prt <= 65535)
-            *port = (uint16_t)prt;
+
+    if (*p == '[') {
+        const char *bracket_end = strchr(p, ']');
+        if (!bracket_end || bracket_end >= end)
+            return -1;
+        host_start = p + 1;
+        hlen = (size_t)(bracket_end - host_start);
+        if (bracket_end + 1 < end && bracket_end[1] == ':') {
+            int prt = atoi(bracket_end + 2);
+            if (prt > 0 && prt <= 65535)
+                *port = (uint16_t)prt;
+        }
     } else {
-        hlen = (size_t)(end - p);
+        const char *colon = memchr(p, ':', (size_t)(end - p));
+        if (colon && colon < end) {
+            hlen = (size_t)(colon - p);
+            int prt = atoi(colon + 1);
+            if (prt > 0 && prt <= 65535)
+                *port = (uint16_t)prt;
+        } else {
+            hlen = (size_t)(end - p);
+        }
     }
 
     if (hlen == 0 || hlen >= hostlen)
         return -1;
 
-    memcpy(host, p, hlen);
+    memcpy(host, host_start, hlen);
     host[hlen] = '\0';
-
-    if (host[0] == '[') {
-        char *br = strchr(host, ']');
-        if (br) {
-            *br = '\0';
-            memmove(host, host + 1, strlen(host));
-        }
-    }
     return 0;
 }
 

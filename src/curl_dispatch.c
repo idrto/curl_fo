@@ -132,6 +132,8 @@ CURLcode cf_curl_easy_setopt(CURL *curl, CURLoption opt, ...)
     va_start(ap, opt);
     void *arg = va_arg(ap, void *);
     va_end(ap);
+    if (opt == CURLOPT_PROXY)
+        cf_shadow_set_proxy(curl, (const char *)arg);
     cf_dispatch_init();
     return p_setopt ? p_setopt(curl, opt, arg) : CURLE_FAILED_INIT;
 }

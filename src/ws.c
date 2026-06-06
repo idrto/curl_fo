@@ -78,12 +78,16 @@ cf_ws *cf_ws_connect(cf_ctx *ctx, const char *url)
         return NULL;
 
     cf_ws *ws = calloc(1, sizeof(cf_ws));
-    if (!ws) return NULL;
+    if (!ws) {
+        cf_dns_entry_unref(ctx, entry);
+        return NULL;
+    }
 
     ws->ctx = ctx;
     ws->entry = entry;
     ws->curl = cf_curl_easy_init();
     if (!ws->curl) {
+        cf_dns_entry_unref(ctx, entry);
         free(ws);
         return NULL;
     }
@@ -214,6 +218,8 @@ void cf_ws_close(cf_ws *ws)
     if (!ws) return;
     if (ws->curl)
         cf_curl_easy_cleanup(ws->curl);
+    if (ws->entry)
+        cf_dns_entry_unref(ws->ctx, ws->entry);
     free(ws);
 }
 

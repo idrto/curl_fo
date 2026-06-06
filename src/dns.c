@@ -232,8 +232,8 @@ static int cf_dns_query_type(const char *host, uint16_t qtype,
 
         uint16_t type = (uint16_t)((resp[off] << 8) | resp[off + 1]);
         off += 4;
-        uint32_t ttl = (uint32_t)((resp[off] << 24) | (resp[off+1] << 16) |
-                                  (resp[off+2] << 8) | resp[off+3]);
+        uint32_t ttl = ((uint32_t)resp[off] << 24) | ((uint32_t)resp[off + 1] << 16) |
+                       ((uint32_t)resp[off + 2] << 8) | (uint32_t)resp[off + 3];
         off += 4;
         uint16_t rdlen = (uint16_t)((resp[off] << 8) | resp[off + 1]);
         off += 2;

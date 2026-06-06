@@ -23,10 +23,7 @@ static struct curl_slist *cf_build_resolve(const char *host, uint16_t port,
 
 static int cf_has_proxy(CURL *curl)
 {
-    char *proxy = NULL;
-    if (cf_curl_easy_getinfo(curl, CURLINFO_PRIVATE, &proxy) == CURLE_OK)
-        (void)proxy;
-    return 0;
+    return cf_shadow_get_proxy(curl) != NULL;
 }
 
 static CURLcode cf_perform_with_ip(cf_ctx *ctx, CURL *curl,
@@ -76,7 +73,6 @@ static CURLcode cf_perform_with_ip(cf_ctx *ctx, CURL *curl,
     cf_curl_easy_setopt(curl, CURLOPT_HTTPHEADER, cf_shadow_get_headers(curl));
     cf_curl_slist_free_all(resolve);
     cf_curl_slist_free_all(owned);
-    (void)cf_has_proxy(curl);
     return rc;
 }
 
@@ -101,6 +97,11 @@ CURLcode cf_easy_perform(cf_ctx *ctx, CURL *curl)
 
     cf_vlog(cfg, "request %s → %s:%u\n", url, host, port);
 
+    if (cf_has_proxy(curl)) {
+        cf_vlog(cfg, "HTTP proxy configured — RESOLVE pinning skipped\n");
+        return cf_curl_easy_perform(curl);
+    }
+
     cf_dns_entry *entry = cf_resolve_host(ctx, host, port);
     if (!entry)
         return CURLE_COULDNT_RESOLVE_HOST;
@@ -110,21 +111,29 @@ CURLcode cf_easy_perform(cf_ctx *ctx, CURL *curl)
     cf_generate_uuid(req_id, sizeof(req_id));
     cf_vlog(cfg, "request id %s for idempotency header\n", req_id);
 
+    CURLcode rc = CURLE_OK;
+
     if (!entry->multi_ip) {
         if (entry->all_count == 1) {
             cf_vlog(cfg, "chosen IP %s (only address)\n", entry->all_addrs[0]);
-            return cf_perform_with_ip(ctx, curl, host, port,
-                                      entry->all_addrs[0], req_id, method, 1, 1);
+            rc = cf_perform_with_ip(ctx, curl, host, port,
+                                    entry->all_addrs[0], req_id, method, 1, 1);
+            cf_dns_entry_unref(ctx, entry);
+            return rc;
         }
         cf_vlog(cfg, "multi-address host without ranking — passthrough\n");
-        return cf_curl_easy_perform(curl);
+        rc = cf_curl_easy_perform(curl);
+        cf_dns_entry_unref(ctx, entry);
+        return rc;
     }
 
     CURLcode last = CURLE_OK;
     size_t attempts = entry->rank_count;
     if (attempts == 0) {
         cf_vlog(cfg, "no ranked IPs — passthrough\n");
-        return cf_curl_easy_perform(curl);
+        rc = cf_curl_easy_perform(curl);
+        cf_dns_entry_unref(ctx, entry);
+        return rc;
     }
 
     cf_vlog(cfg, "failover enabled — trying up to %zu ranked IP(s)\n", attempts);
@@ -139,6 +148,7 @@ CURLcode cf_easy_perform(cf_ctx *ctx, CURL *curl)
         if (!cf_should_failover(last, http_code)) {
             cf_vlog(cfg, "using IP %s (attempt %zu succeeded)\n",
                     entry->ranks[i].addr, i + 1);
+            cf_dns_entry_unref(ctx, entry);
             return last;
         }
 
@@ -152,6 +162,7 @@ CURLcode cf_easy_perform(cf_ctx *ctx, CURL *curl)
 
     cf_vlog(cfg, "all %zu ranked IP(s) failed — giving up (%s)\n",
             attempts, cf_curl_easy_strerror(last));
+    cf_dns_entry_unref(ctx, entry);
     return last;
 }
 

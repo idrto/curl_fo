@@ -28,5 +28,11 @@ int test_probe_run(void)
         free(out);
     }
 
+    /* Refused port must not rank as a fast success (SO_ERROR check). */
+    char *bad[] = {"127.0.0.1"};
+    out = NULL;
+    count = 0;
+    ASSERT(cf_probe_rank("localhost", 1, bad, 1, 10, 3, &out, &count, NULL) < 0);
+
     return 0;
 }

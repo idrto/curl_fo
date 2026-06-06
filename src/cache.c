@@ -79,7 +79,22 @@ void cf_cache_remove(cf_ctx *ctx, cf_dns_entry *entry)
     }
     cf_cache_unlink(ctx, entry);
     ctx->entry_count--;
-    cf_entry_free(entry);
+    if (entry->refs == 0)
+        cf_entry_free(entry);
+    else
+        entry->evicted = true;
+}
+
+void cf_dns_entry_unref(cf_ctx *ctx, cf_dns_entry *entry)
+{
+    if (!ctx || !entry)
+        return;
+    cf_mutex_lock(ctx->cache_mutex);
+    if (entry->refs > 0)
+        entry->refs--;
+    if (entry->refs == 0 && entry->evicted)
+        cf_entry_free(entry);
+    cf_mutex_unlock(ctx->cache_mutex);
 }
 
 /* hash_next field — add to struct via embedding in lru or separate */
@@ -103,8 +118,10 @@ cf_dns_entry *cf_cache_lookup(cf_ctx *ctx, const char *host, uint16_t port)
 {
     cf_mutex_lock(ctx->cache_mutex);
     cf_dns_entry *e = cf_cache_bucket_find(ctx, host, port);
-    if (e)
+    if (e) {
         cf_cache_touch(ctx, e);
+        e->refs++;
+    }
     cf_mutex_unlock(ctx->cache_mutex);
     return e;
 }
@@ -164,9 +181,16 @@ static int cf_entry_set_all_addrs(cf_dns_entry *e, char **addrs, size_t count)
 
 static int cf_entry_set_ranks(cf_dns_entry *e, cf_ip_rank *ranks, size_t count)
 {
+    cf_ip_rank *new_ranks = malloc(count * sizeof(cf_ip_rank));
+    if (!new_ranks) {
+        free(e->ranks);
+        e->ranks = NULL;
+        e->rank_count = 0;
+        e->rank_cap = 0;
+        return -1;
+    }
     free(e->ranks);
-    e->ranks = malloc(count * sizeof(cf_ip_rank));
-    if (!e->ranks) return -1;
+    e->ranks = new_ranks;
     memcpy(e->ranks, ranks, count * sizeof(cf_ip_rank));
     e->rank_count = count;
     e->rank_cap = count;
@@ -242,7 +266,11 @@ static int cf_entry_refresh_ttl(cf_ctx *ctx, cf_dns_entry *entry)
     size_t top_n = ctx->cfg->top_ips;
     if (nr > top_n) nr = top_n;
 
-    cf_entry_set_ranks(entry, new_ranks, nr);
+    if (cf_entry_set_ranks(entry, new_ranks, nr) < 0) {
+        free(new_ranks);
+        cf_dns_result_free(&res);
+        return -1;
+    }
     free(new_ranks);
     cf_dns_result_free(&res);
     return 0;
@@ -284,7 +312,11 @@ static int cf_entry_populate(cf_ctx *ctx, cf_dns_entry *entry)
         return -1;
     }
 
-    cf_entry_set_ranks(entry, ranks, rank_count);
+    if (cf_entry_set_ranks(entry, ranks, rank_count) < 0) {
+        free(ranks);
+        cf_dns_result_free(&res);
+        return -1;
+    }
     entry->probed = 1;
     free(ranks);
     cf_dns_result_free(&res);
@@ -293,7 +325,7 @@ static int cf_entry_populate(cf_ctx *ctx, cf_dns_entry *entry)
 
 /**
  * Resolve host:port into cache entry with ranks ready for failover.
- * Returns pointer valid until cache eviction (caller must not free).
+ * Caller must release with cf_dns_entry_unref() when done.
  */
 cf_dns_entry *cf_resolve_host(cf_ctx *ctx, const char *host, uint16_t port)
 {
@@ -332,6 +364,7 @@ cf_dns_entry *cf_resolve_host(cf_ctx *ctx, const char *host, uint16_t port)
                 (uint64_t)entry->ttl_sec * 1000ULL;
         }
         cf_cache_touch(ctx, entry);
+        entry->refs++;
         cf_mutex_unlock(ctx->cache_mutex);
         return entry;
     }
@@ -360,6 +393,7 @@ cf_dns_entry *cf_resolve_host(cf_ctx *ctx, const char *host, uint16_t port)
     cf_cache_link_head(ctx, entry);
     ctx->entry_count++;
 
+    entry->refs++;
     cf_mutex_unlock(ctx->cache_mutex);
     return entry;
 }
