@@ -49,6 +49,7 @@ struct cf_config {
     char    *idempotency_header;
     unsigned latency_bucket_ms;
     unsigned default_ttl_sec;
+    int      verbose;
 };
 
 /* ── DNS resolution result ───────────────────────────────────────────── */
@@ -67,7 +68,7 @@ void cf_dns_result_free(cf_dns_result *r);
  * Falls back to getaddrinfo with default_ttl on failure.
  */
 int cf_dns_resolve(const char *host, cf_dns_result *out,
-                   unsigned default_ttl_sec);
+                   unsigned default_ttl_sec, cf_config *cfg);
 
 /* ── Cache ───────────────────────────────────────────────────────────── */
 
@@ -92,7 +93,8 @@ cf_dns_entry *cf_resolve_host(cf_ctx *ctx, const char *host, uint16_t port);
 int cf_probe_rank(const char *host, uint16_t port,
                   char **addrs, size_t count,
                   unsigned bucket_ms, size_t top_n,
-                  cf_ip_rank **out_ranks, size_t *out_count);
+                  cf_ip_rank **out_ranks, size_t *out_count,
+                  cf_config *cfg);
 
 /* ── Utility ─────────────────────────────────────────────────────────── */
 
@@ -121,6 +123,27 @@ void          cf_shadow_free(CURL *curl);
 void          cf_easy_attach(CURL *curl);
 void          cf_shadow_set_headers(CURL *curl, struct curl_slist *headers);
 struct curl_slist *cf_shadow_get_headers(CURL *curl);
+void          cf_shadow_set_postfields(CURL *curl, const char *data);
+const char   *cf_shadow_get_postfields(CURL *curl);
+
+/* Verbose logging (stderr, gated by cfg->verbose) */
+void cf_vlog(cf_config *cfg, const char *fmt, ...);
+void cf_log_dns_query(cf_config *cfg, const char *host, const char *rtype,
+                      const char *server, const uint8_t *wire, size_t wire_len,
+                      uint16_t query_id);
+void cf_log_dns_answer(cf_config *cfg, const char *addr, uint32_t ttl);
+void cf_log_dns_fallback(cf_config *cfg, const char *host, const char *why);
+void cf_log_dns_summary(cf_config *cfg, const char *host, cf_dns_result *res,
+                        const char *source);
+void cf_log_probe_start(cf_config *cfg, const char *host, uint16_t port,
+                        size_t count, unsigned bucket_ms);
+void cf_log_probe_ip(cf_config *cfg, const char *addr, int ok,
+                     unsigned raw_ms, unsigned bucket_ms);
+void cf_log_probe_ranking(cf_config *cfg, cf_ip_rank *ranks, size_t count);
+void cf_log_curl_replay(cf_config *cfg, CURL *curl, const char *host,
+                        uint16_t port, const char *ip, const char *req_id,
+                        cf_method method, long timeout_ms, long connect_ms,
+                        int connect_only);
 
 /* libcurl dispatch — uses dlsym when CURL_FO_SHIM_BUILD is set */
 CURLcode cf_curl_easy_perform(CURL *curl);

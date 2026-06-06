@@ -9,6 +9,7 @@ typedef struct cf_curl_shadow {
     cf_method         method;
     int               has_method;
     struct curl_slist  *headers;
+    char              *postfields;
 } cf_curl_shadow;
 
 cf_curl_shadow *cf_shadow_get(CURL *curl)
@@ -72,11 +73,28 @@ struct curl_slist *cf_shadow_get_headers(CURL *curl)
     return NULL;
 }
 
+void cf_shadow_set_postfields(CURL *curl, const char *data)
+{
+    cf_curl_shadow *s = cf_shadow_get(curl);
+    if (!s) return;
+    free(s->postfields);
+    s->postfields = data ? strdup(data) : NULL;
+}
+
+const char *cf_shadow_get_postfields(CURL *curl)
+{
+    cf_curl_shadow *s = NULL;
+    if (cf_curl_easy_getinfo(curl, CURLINFO_PRIVATE, &s) == CURLE_OK && s)
+        return s->postfields;
+    return NULL;
+}
+
 void cf_shadow_free(CURL *curl)
 {
     cf_curl_shadow *s = NULL;
     if (cf_curl_easy_getinfo(curl, CURLINFO_PRIVATE, &s) == CURLE_OK && s) {
         cf_curl_easy_setopt(curl, CURLOPT_PRIVATE, NULL);
+        free(s->postfields);
         free(s);
     }
 }

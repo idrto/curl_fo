@@ -129,7 +129,8 @@ static int cf_get_system_dns(char *server, size_t serverlen)
 
 static int cf_dns_query_type(const char *host, uint16_t qtype,
                              cf_dns_record *recs, size_t rec_cap,
-                             size_t *rec_count, uint32_t *min_ttl)
+                             size_t *rec_count, uint32_t *min_ttl,
+                             cf_config *cfg)
 {
     uint8_t query[512];
     size_t qlen = 0;
@@ -159,6 +160,9 @@ static int cf_dns_query_type(const char *host, uint16_t qtype,
 
     char dns_server[64];
     cf_get_system_dns(dns_server, sizeof(dns_server));
+
+    const char *rtype = (qtype == 1) ? "A" : (qtype == 28) ? "AAAA" : "TYPE?";
+    cf_log_dns_query(cfg, host, rtype, dns_server, query, qlen, id);
 
 #ifdef _WIN32
     static int wsa_init;
@@ -247,11 +251,13 @@ static int cf_dns_query_type(const char *host, uint16_t qtype,
                 struct in_addr ia;
                 memcpy(&ia, resp + off, 4);
                 inet_ntop(AF_INET, &ia, rec->addr, sizeof(rec->addr));
+                cf_log_dns_answer(cfg, rec->addr, ttl);
                 (*rec_count)++;
             } else if (type == 28 && rdlen == 16) {
                 struct in6_addr ia6;
                 memcpy(&ia6, resp + off, 16);
                 inet_ntop(AF_INET6, &ia6, rec->addr, sizeof(rec->addr));
+                cf_log_dns_answer(cfg, rec->addr, ttl);
                 (*rec_count)++;
             }
         }
@@ -261,8 +267,9 @@ static int cf_dns_query_type(const char *host, uint16_t qtype,
 }
 
 static int cf_dns_resolve_getaddrinfo(const char *host, cf_dns_result *out,
-                                      unsigned default_ttl)
+                                      unsigned default_ttl, cf_config *cfg)
 {
+    cf_log_dns_fallback(cfg, host, "UDP query failed or empty");
     struct addrinfo hints, *res = NULL, *rp;
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
@@ -312,6 +319,8 @@ static int cf_dns_resolve_getaddrinfo(const char *host, cf_dns_result *out,
         out->addrs[out->count++] = strdup(buf);
     }
     freeaddrinfo(res);
+    if (out->count > 0)
+        cf_log_dns_summary(cfg, host, out, "getaddrinfo");
     return out->count > 0 ? 0 : -1;
 }
 
@@ -349,7 +358,7 @@ static void cf_dns_merge_records(cf_dns_result *out,
 }
 
 int cf_dns_resolve(const char *host, cf_dns_result *out,
-                   unsigned default_ttl)
+                   unsigned default_ttl, cf_config *cfg)
 {
     cf_dns_record recs_a[32], recs_aaaa[32];
     size_t a_count = 0, aaaa_count = 0;
@@ -360,11 +369,11 @@ int cf_dns_resolve(const char *host, cf_dns_result *out,
     out->addrs = NULL;
     out->count = 0;
 
-    int ok_a = cf_dns_query_type(host, 1, recs_a, 32, &a_count, &min_ttl) == 0;
-    int ok_aaaa = cf_dns_query_type(host, 28, recs_aaaa, 32, &aaaa_count, &min_ttl) == 0;
+    int ok_a = cf_dns_query_type(host, 1, recs_a, 32, &a_count, &min_ttl, cfg) == 0;
+    int ok_aaaa = cf_dns_query_type(host, 28, recs_aaaa, 32, &aaaa_count, &min_ttl, cfg) == 0;
 
     if (!ok_a && !ok_aaaa)
-        return cf_dns_resolve_getaddrinfo(host, out, default_ttl);
+        return cf_dns_resolve_getaddrinfo(host, out, default_ttl, cfg);
 
     out->ttl_sec = min_ttl > 0 ? min_ttl : default_ttl;
     out->addrs = NULL;
@@ -376,7 +385,8 @@ int cf_dns_resolve(const char *host, cf_dns_result *out,
         cf_dns_merge_records(out, recs_aaaa, aaaa_count, min_ttl);
 
     if (out->count == 0)
-        return cf_dns_resolve_getaddrinfo(host, out, default_ttl);
+        return cf_dns_resolve_getaddrinfo(host, out, default_ttl, cfg);
 
+    cf_log_dns_summary(cfg, host, out, "UDP DNS");
     return 0;
 }

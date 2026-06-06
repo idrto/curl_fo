@@ -122,11 +122,13 @@ static int cf_rank_cmp(const void *a, const void *b)
 int cf_probe_rank(const char *host, uint16_t port,
                   char **addrs, size_t count,
                   unsigned bucket_ms, size_t top_n,
-                  cf_ip_rank **out_ranks, size_t *out_count)
+                  cf_ip_rank **out_ranks, size_t *out_count,
+                  cf_config *cfg)
 {
-    (void)host;
     if (!addrs || count == 0 || !out_ranks || !out_count)
         return -1;
+
+    cf_log_probe_start(cfg, host, port, count, bucket_ms);
 
     cf_ip_rank *ranks = calloc(count, sizeof(cf_ip_rank));
     if (!ranks) return -1;
@@ -134,12 +136,15 @@ int cf_probe_rank(const char *host, uint16_t port,
     size_t valid = 0;
     for (size_t i = 0; i < count; i++) {
         unsigned raw = 0;
-        if (cf_tcp_connect_latency(addrs[i], port, &raw) < 0)
+        if (cf_tcp_connect_latency(addrs[i], port, &raw) < 0) {
+            cf_log_probe_ip(cfg, addrs[i], 0, 0, 0);
             continue;
+        }
         cf_ip_rank *r = &ranks[valid++];
         strncpy(r->addr, addrs[i], sizeof(r->addr) - 1);
         r->raw_ms = raw;
         r->bucket_ms = cf_round_bucket(raw, bucket_ms);
+        cf_log_probe_ip(cfg, addrs[i], 1, raw, r->bucket_ms);
     }
 
     if (valid == 0) {
@@ -176,5 +181,6 @@ int cf_probe_rank(const char *host, uint16_t port,
 
     *out_ranks = out;
     *out_count = n;
+    cf_log_probe_ranking(cfg, out, n);
     return 0;
 }

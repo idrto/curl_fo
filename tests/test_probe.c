@@ -22,7 +22,7 @@ int test_probe_run(void)
     char *addrs[] = {"127.0.0.1"};
     cf_ip_rank *out = NULL;
     size_t count = 0;
-    if (cf_probe_rank("localhost", 80, addrs, 1, 10, 3, &out, &count) == 0) {
+    if (cf_probe_rank("localhost", 80, addrs, 1, 10, 3, &out, &count, NULL) == 0) {
         ASSERT(count == 1);
         ASSERT(out[0].bucket_ms >= 10);
         free(out);

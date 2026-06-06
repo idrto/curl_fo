@@ -7,14 +7,14 @@ int test_dns_run(void)
     memset(&res, 0, sizeof(res));
 
     /* Fallback resolver should resolve localhost */
-    int rc = cf_dns_resolve("localhost", &res, 300);
+    int rc = cf_dns_resolve("localhost", &res, 300, NULL);
     if (rc == 0) {
         ASSERT(res.count >= 1);
         ASSERT(res.ttl_sec > 0);
     }
     cf_dns_result_free(&res);
 
-    rc = cf_dns_resolve("invalid.invalid.invalid.example", &res, 300);
+    rc = cf_dns_resolve("invalid.invalid.invalid.example", &res, 300, NULL);
     /* May fail on network — acceptable */
     cf_dns_result_free(&res);
 

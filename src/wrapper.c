@@ -100,6 +100,12 @@ CF_EXPORT CURLcode curl_easy_setopt(CURL *curl, CURLoption option, ...)
         cf_shadow_set_url(curl, url);
         return real ? real(curl, option, url) : CURLE_BAD_FUNCTION_ARGUMENT;
     }
+    if (option == CURLOPT_POSTFIELDS) {
+        const char *body = va_arg(ap, const char *);
+        va_end(ap);
+        cf_shadow_set_postfields(curl, body);
+        return real ? real(curl, option, body) : CURLE_BAD_FUNCTION_ARGUMENT;
+    }
     if (option == CURLOPT_HTTPHEADER) {
         struct curl_slist *h = va_arg(ap, struct curl_slist *);
         va_end(ap);

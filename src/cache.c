@@ -183,7 +183,7 @@ static int cf_entry_refresh_ttl(cf_ctx *ctx, cf_dns_entry *entry)
     cf_dns_result res;
     memset(&res, 0, sizeof(res));
 
-    if (cf_dns_resolve(entry->host, &res, ctx->cfg->default_ttl_sec) < 0)
+    if (cf_dns_resolve(entry->host, &res, ctx->cfg->default_ttl_sec, ctx->cfg) < 0)
         return -1;
 
     char *top_ip = entry->rank_count > 0 ? entry->ranks[0].addr : NULL;
@@ -253,7 +253,7 @@ static int cf_entry_populate(cf_ctx *ctx, cf_dns_entry *entry)
     cf_dns_result res;
     memset(&res, 0, sizeof(res));
 
-    if (cf_dns_resolve(entry->host, &res, ctx->cfg->default_ttl_sec) < 0)
+    if (cf_dns_resolve(entry->host, &res, ctx->cfg->default_ttl_sec, ctx->cfg) < 0)
         return -1;
 
     if (cf_entry_set_all_addrs(entry, res.addrs, res.count) < 0) {
@@ -270,6 +270,8 @@ static int cf_entry_populate(cf_ctx *ctx, cf_dns_entry *entry)
         entry->probed = 0;
         entry->rank_count = 0;
         cf_dns_result_free(&res);
+        if (entry->all_count == 1)
+            cf_vlog(ctx->cfg, "single IP %s — failover not needed\n", entry->all_addrs[0]);
         return 0;
     }
 
@@ -277,7 +279,7 @@ static int cf_entry_populate(cf_ctx *ctx, cf_dns_entry *entry)
     size_t rank_count = 0;
     if (cf_probe_rank(entry->host, entry->port, res.addrs, res.count,
                       ctx->cfg->latency_bucket_ms, ctx->cfg->top_ips,
-                      &ranks, &rank_count) < 0) {
+                      &ranks, &rank_count, ctx->cfg) < 0) {
         cf_dns_result_free(&res);
         return -1;
     }
@@ -301,10 +303,13 @@ cf_dns_entry *cf_resolve_host(cf_ctx *ctx, const char *host, uint16_t port)
     uint64_t now = cf_now_ms();
 
     if (entry) {
+        cf_vlog(ctx->cfg, "cache hit %s:%u (%zu IP(s), %zu ranked)\n",
+                host, port, entry->all_count, entry->rank_count);
         if (now >= entry->expires_at_ms) {
+            cf_vlog(ctx->cfg, "TTL expired for %s:%u — refreshing\n", host, port);
             int rc = cf_entry_refresh_ttl(ctx, entry);
             if (rc == 1) {
-                /* top IP removed — re-probe */
+                cf_vlog(ctx->cfg, "top ranked IP gone — re-probing %s:%u\n", host, port);
                 free(entry->ranks);
                 entry->ranks = NULL;
                 entry->rank_count = 0;
@@ -314,7 +319,7 @@ cf_dns_entry *cf_resolve_host(cf_ctx *ctx, const char *host, uint16_t port)
                                   entry->all_addrs, entry->all_count,
                                   ctx->cfg->latency_bucket_ms,
                                   ctx->cfg->top_ips,
-                                  &new_ranks, &new_count) == 0) {
+                                  &new_ranks, &new_count, ctx->cfg) == 0) {
                     entry->ranks = new_ranks;
                     entry->rank_count = new_count;
                     entry->probed = 1;
@@ -330,6 +335,8 @@ cf_dns_entry *cf_resolve_host(cf_ctx *ctx, const char *host, uint16_t port)
         cf_mutex_unlock(ctx->cache_mutex);
         return entry;
     }
+
+    cf_vlog(ctx->cfg, "cache miss %s:%u — resolving\n", host, port);
 
     entry = cf_entry_create(host, port);
     if (!entry) {

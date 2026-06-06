@@ -29,7 +29,7 @@ static void usage(const char *prog)
         "  -o, --output FILE      Write response body to FILE\n"
         "  -i, --include          Include response headers in output\n"
         "  -s, --silent           Silent mode\n"
-        "  -v, --verbose          Verbose libcurl output\n"
+        "  -v, --verbose          Verbose curl_fo + libcurl output (stderr)\n"
         "  -L, --location         Follow redirects\n"
         "  --connect-timeout SEC  Connect timeout\n"
         "  -m, --max-time SEC     Total timeout override\n"
@@ -100,6 +100,8 @@ int main(int argc, char **argv)
 
     cf_config *cfg = cf_config_create();
     cf_config_load_env(cfg);
+    if (verbose)
+        cf_config_set_verbose(cfg, 1);
     cf_ctx *ctx = cf_ctx_create(cfg);
 
     CURL *curl = curl_easy_init();
@@ -118,6 +120,7 @@ int main(int argc, char **argv)
 
     if (data) {
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data);
+        cf_shadow_set_postfields(curl, data);
     }
 
     if (output) {

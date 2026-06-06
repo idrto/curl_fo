@@ -83,6 +83,7 @@ endfunction()
 
 set(CURL_FO_CORE_SOURCES
     src/config.c
+    src/log.c
     src/util.c
     src/dns.c
     src/cache.c

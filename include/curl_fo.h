@@ -86,6 +86,9 @@ CF_EXPORT void cf_config_set_connect_timeout_ms(cf_config *cfg, long ms);
 CF_EXPORT void cf_config_set_idempotency_header(cf_config *cfg, const char *name);
 CF_EXPORT void cf_config_set_latency_bucket_ms(cf_config *cfg, unsigned bucket_ms);
 CF_EXPORT void cf_config_set_default_ttl_sec(cf_config *cfg, unsigned ttl_sec);
+/** Enable curl_fo activity logging to stderr (DNS, probe, failover, replay curl). */
+CF_EXPORT void cf_config_set_verbose(cf_config *cfg, int on);
+CF_EXPORT int  cf_config_get_verbose(const cf_config *cfg);
 
 CF_EXPORT size_t   cf_config_get_lru_capacity(const cf_config *cfg);
 CF_EXPORT size_t   cf_config_get_top_ips(const cf_config *cfg);
@@ -156,6 +159,8 @@ CF_EXPORT CURLcode cf_request(cf_ctx *ctx, const char *url, cf_method method);
  * Called automatically by shim/wrapper on curl_easy_init().
  */
 CF_EXPORT void cf_easy_attach(CURL *curl);
+/** Track POST body for verbose replay logging (shim/wrapper set this automatically). */
+CF_EXPORT void cf_shadow_set_postfields(CURL *curl, const char *data);
 
 /* ── Phase 1: WebSocket failover ─────────────────────────────────────── */
 

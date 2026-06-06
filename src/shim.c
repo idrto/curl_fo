@@ -89,6 +89,12 @@ CF_SHIM_EXPORT CURLcode curl_easy_setopt(CURL *curl, CURLoption option, ...)
         cf_shadow_set_url(curl, url);
         return real(curl, option, url);
     }
+    if (option == CURLOPT_POSTFIELDS) {
+        const char *body = va_arg(ap, const char *);
+        va_end(ap);
+        cf_shadow_set_postfields(curl, body);
+        return real(curl, option, body);
+    }
     if (option == CURLOPT_HTTPHEADER) {
         struct curl_slist *hdrs = va_arg(ap, struct curl_slist *);
         va_end(ap);

@@ -59,6 +59,16 @@ build CMakeFiles/curl_fo.dir/src/config.c.obj: C_COMPILER__curl_fo_unscanned_Rel
   OBJECT_FILE_DIR = CMakeFiles\curl_fo.dir\src
   TARGET_SUPPORT_DIR = CMakeFiles\curl_fo.dir
 
+build CMakeFiles/curl_fo.dir/src/log.c.obj: C_COMPILER__curl_fo_unscanned_Release D$:/Code/idrto/curl_fo/src/log.c || cmake_object_order_depends_target_curl_fo
+  CONFIG = Release
+  DEFINES = -DCURL_FO_BUILDING -Dcurl_fo_EXPORTS
+  DEP_FILE = CMakeFiles\curl_fo.dir\src\log.c.obj.d
+  FLAGS = -O3 -DNDEBUG -std=c11
+  INCLUDES = -ID:/Code/idrto/curl_fo/include -ID:/Code/idrto/curl_fo/src
+  OBJECT_DIR = CMakeFiles\curl_fo.dir
+  OBJECT_FILE_DIR = CMakeFiles\curl_fo.dir\src
+  TARGET_SUPPORT_DIR = CMakeFiles\curl_fo.dir
+
 build CMakeFiles/curl_fo.dir/src/util.c.obj: C_COMPILER__curl_fo_unscanned_Release D$:/Code/idrto/curl_fo/src/util.c || cmake_object_order_depends_target_curl_fo
   CONFIG = Release
   DEFINES = -DCURL_FO_BUILDING -Dcurl_fo_EXPORTS
@@ -157,7 +167,7 @@ build CMakeFiles/curl_fo.dir/src/shim_ctx.c.obj: C_COMPILER__curl_fo_unscanned_R
 #############################################
 # Link the shared library libcurl_fo.dll
 
-build libcurl_fo.dll libcurl_fo.dll.a: C_SHARED_LIBRARY_LINKER__curl_fo_Release CMakeFiles/curl_fo.dir/src/config.c.obj CMakeFiles/curl_fo.dir/src/util.c.obj CMakeFiles/curl_fo.dir/src/dns.c.obj CMakeFiles/curl_fo.dir/src/cache.c.obj CMakeFiles/curl_fo.dir/src/probe.c.obj CMakeFiles/curl_fo.dir/src/http.c.obj CMakeFiles/curl_fo.dir/src/ws.c.obj CMakeFiles/curl_fo.dir/src/handle.c.obj CMakeFiles/curl_fo.dir/src/curl_dispatch.c.obj CMakeFiles/curl_fo.dir/src/shim_ctx.c.obj | C$:/msys64/mingw64/lib/libcurl.dll.a
+build libcurl_fo.dll libcurl_fo.dll.a: C_SHARED_LIBRARY_LINKER__curl_fo_Release CMakeFiles/curl_fo.dir/src/config.c.obj CMakeFiles/curl_fo.dir/src/log.c.obj CMakeFiles/curl_fo.dir/src/util.c.obj CMakeFiles/curl_fo.dir/src/dns.c.obj CMakeFiles/curl_fo.dir/src/cache.c.obj CMakeFiles/curl_fo.dir/src/probe.c.obj CMakeFiles/curl_fo.dir/src/http.c.obj CMakeFiles/curl_fo.dir/src/ws.c.obj CMakeFiles/curl_fo.dir/src/handle.c.obj CMakeFiles/curl_fo.dir/src/curl_dispatch.c.obj CMakeFiles/curl_fo.dir/src/shim_ctx.c.obj | C$:/msys64/mingw64/lib/libcurl.dll.a
   CONFIG = Release
   LANGUAGE_COMPILE_FLAGS = -O3 -DNDEBUG
   LINK_FLAGS = -shared
@@ -184,6 +194,16 @@ build CMakeFiles/curl_fo_static.dir/src/config.c.obj: C_COMPILER__curl_fo_static
   CONFIG = Release
   DEFINES = -DCURL_FO_BUILDING
   DEP_FILE = CMakeFiles\curl_fo_static.dir\src\config.c.obj.d
+  FLAGS = -O3 -DNDEBUG -std=c11
+  INCLUDES = -ID:/Code/idrto/curl_fo/include -ID:/Code/idrto/curl_fo/src
+  OBJECT_DIR = CMakeFiles\curl_fo_static.dir
+  OBJECT_FILE_DIR = CMakeFiles\curl_fo_static.dir\src
+  TARGET_SUPPORT_DIR = CMakeFiles\curl_fo_static.dir
+
+build CMakeFiles/curl_fo_static.dir/src/log.c.obj: C_COMPILER__curl_fo_static_unscanned_Release D$:/Code/idrto/curl_fo/src/log.c || cmake_object_order_depends_target_curl_fo_static
+  CONFIG = Release
+  DEFINES = -DCURL_FO_BUILDING
+  DEP_FILE = CMakeFiles\curl_fo_static.dir\src\log.c.obj.d
   FLAGS = -O3 -DNDEBUG -std=c11
   INCLUDES = -ID:/Code/idrto/curl_fo/include -ID:/Code/idrto/curl_fo/src
   OBJECT_DIR = CMakeFiles\curl_fo_static.dir
@@ -288,7 +308,7 @@ build CMakeFiles/curl_fo_static.dir/src/shim_ctx.c.obj: C_COMPILER__curl_fo_stat
 #############################################
 # Link the static library libcurl_fo_static.a
 
-build libcurl_fo_static.a: C_STATIC_LIBRARY_LINKER__curl_fo_static_Release CMakeFiles/curl_fo_static.dir/src/config.c.obj CMakeFiles/curl_fo_static.dir/src/util.c.obj CMakeFiles/curl_fo_static.dir/src/dns.c.obj CMakeFiles/curl_fo_static.dir/src/cache.c.obj CMakeFiles/curl_fo_static.dir/src/probe.c.obj CMakeFiles/curl_fo_static.dir/src/http.c.obj CMakeFiles/curl_fo_static.dir/src/ws.c.obj CMakeFiles/curl_fo_static.dir/src/handle.c.obj CMakeFiles/curl_fo_static.dir/src/curl_dispatch.c.obj CMakeFiles/curl_fo_static.dir/src/shim_ctx.c.obj
+build libcurl_fo_static.a: C_STATIC_LIBRARY_LINKER__curl_fo_static_Release CMakeFiles/curl_fo_static.dir/src/config.c.obj CMakeFiles/curl_fo_static.dir/src/log.c.obj CMakeFiles/curl_fo_static.dir/src/util.c.obj CMakeFiles/curl_fo_static.dir/src/dns.c.obj CMakeFiles/curl_fo_static.dir/src/cache.c.obj CMakeFiles/curl_fo_static.dir/src/probe.c.obj CMakeFiles/curl_fo_static.dir/src/http.c.obj CMakeFiles/curl_fo_static.dir/src/ws.c.obj CMakeFiles/curl_fo_static.dir/src/handle.c.obj CMakeFiles/curl_fo_static.dir/src/curl_dispatch.c.obj CMakeFiles/curl_fo_static.dir/src/shim_ctx.c.obj
   CONFIG = Release
   LANGUAGE_COMPILE_FLAGS = -O3 -DNDEBUG
   OBJECT_DIR = CMakeFiles\curl_fo_static.dir
@@ -309,7 +329,7 @@ build cmake_object_order_depends_target_curl_fo_shim: phony || .
 
 build CMakeFiles/curl_fo_shim.dir/src/shim.c.obj: C_COMPILER__curl_fo_shim_unscanned_Release D$:/Code/idrto/curl_fo/src/shim.c || cmake_object_order_depends_target_curl_fo_shim
   CONFIG = Release
-  DEFINES = -DCURL_FO_BUILDING -DCURL_FO_SHIM_BUILD -Dcurl_fo_shim_EXPORTS
+  DEFINES = -DBUILDING_LIBCURL -DCURL_FO_BUILDING -DCURL_FO_SHIM_BUILD -Dcurl_fo_shim_EXPORTS
   DEP_FILE = CMakeFiles\curl_fo_shim.dir\src\shim.c.obj.d
   FLAGS = -O3 -DNDEBUG -std=c11
   INCLUDES = -ID:/Code/idrto/curl_fo/include -ID:/Code/idrto/curl_fo/src
@@ -319,8 +339,18 @@ build CMakeFiles/curl_fo_shim.dir/src/shim.c.obj: C_COMPILER__curl_fo_shim_unsca
 
 build CMakeFiles/curl_fo_shim.dir/src/config.c.obj: C_COMPILER__curl_fo_shim_unscanned_Release D$:/Code/idrto/curl_fo/src/config.c || cmake_object_order_depends_target_curl_fo_shim
   CONFIG = Release
-  DEFINES = -DCURL_FO_BUILDING -DCURL_FO_SHIM_BUILD -Dcurl_fo_shim_EXPORTS
+  DEFINES = -DBUILDING_LIBCURL -DCURL_FO_BUILDING -DCURL_FO_SHIM_BUILD -Dcurl_fo_shim_EXPORTS
   DEP_FILE = CMakeFiles\curl_fo_shim.dir\src\config.c.obj.d
+  FLAGS = -O3 -DNDEBUG -std=c11
+  INCLUDES = -ID:/Code/idrto/curl_fo/include -ID:/Code/idrto/curl_fo/src
+  OBJECT_DIR = CMakeFiles\curl_fo_shim.dir
+  OBJECT_FILE_DIR = CMakeFiles\curl_fo_shim.dir\src
+  TARGET_SUPPORT_DIR = CMakeFiles\curl_fo_shim.dir
+
+build CMakeFiles/curl_fo_shim.dir/src/log.c.obj: C_COMPILER__curl_fo_shim_unscanned_Release D$:/Code/idrto/curl_fo/src/log.c || cmake_object_order_depends_target_curl_fo_shim
+  CONFIG = Release
+  DEFINES = -DBUILDING_LIBCURL -DCURL_FO_BUILDING -DCURL_FO_SHIM_BUILD -Dcurl_fo_shim_EXPORTS
+  DEP_FILE = CMakeFiles\curl_fo_shim.dir\src\log.c.obj.d
   FLAGS = -O3 -DNDEBUG -std=c11
   INCLUDES = -ID:/Code/idrto/curl_fo/include -ID:/Code/idrto/curl_fo/src
   OBJECT_DIR = CMakeFiles\curl_fo_shim.dir
@@ -329,7 +359,7 @@ build CMakeFiles/curl_fo_shim.dir/src/config.c.obj: C_COMPILER__curl_fo_shim_uns
 
 build CMakeFiles/curl_fo_shim.dir/src/util.c.obj: C_COMPILER__curl_fo_shim_unscanned_Release D$:/Code/idrto/curl_fo/src/util.c || cmake_object_order_depends_target_curl_fo_shim
   CONFIG = Release
-  DEFINES = -DCURL_FO_BUILDING -DCURL_FO_SHIM_BUILD -Dcurl_fo_shim_EXPORTS
+  DEFINES = -DBUILDING_LIBCURL -DCURL_FO_BUILDING -DCURL_FO_SHIM_BUILD -Dcurl_fo_shim_EXPORTS
   DEP_FILE = CMakeFiles\curl_fo_shim.dir\src\util.c.obj.d
   FLAGS = -O3 -DNDEBUG -std=c11
   INCLUDES = -ID:/Code/idrto/curl_fo/include -ID:/Code/idrto/curl_fo/src
@@ -339,7 +369,7 @@ build CMakeFiles/curl_fo_shim.dir/src/util.c.obj: C_COMPILER__curl_fo_shim_unsca
 
 build CMakeFiles/curl_fo_shim.dir/src/dns.c.obj: C_COMPILER__curl_fo_shim_unscanned_Release D$:/Code/idrto/curl_fo/src/dns.c || cmake_object_order_depends_target_curl_fo_shim
   CONFIG = Release
-  DEFINES = -DCURL_FO_BUILDING -DCURL_FO_SHIM_BUILD -Dcurl_fo_shim_EXPORTS
+  DEFINES = -DBUILDING_LIBCURL -DCURL_FO_BUILDING -DCURL_FO_SHIM_BUILD -Dcurl_fo_shim_EXPORTS
   DEP_FILE = CMakeFiles\curl_fo_shim.dir\src\dns.c.obj.d
   FLAGS = -O3 -DNDEBUG -std=c11
   INCLUDES = -ID:/Code/idrto/curl_fo/include -ID:/Code/idrto/curl_fo/src
@@ -349,7 +379,7 @@ build CMakeFiles/curl_fo_shim.dir/src/dns.c.obj: C_COMPILER__curl_fo_shim_unscan
 
 build CMakeFiles/curl_fo_shim.dir/src/cache.c.obj: C_COMPILER__curl_fo_shim_unscanned_Release D$:/Code/idrto/curl_fo/src/cache.c || cmake_object_order_depends_target_curl_fo_shim
   CONFIG = Release
-  DEFINES = -DCURL_FO_BUILDING -DCURL_FO_SHIM_BUILD -Dcurl_fo_shim_EXPORTS
+  DEFINES = -DBUILDING_LIBCURL -DCURL_FO_BUILDING -DCURL_FO_SHIM_BUILD -Dcurl_fo_shim_EXPORTS
   DEP_FILE = CMakeFiles\curl_fo_shim.dir\src\cache.c.obj.d
   FLAGS = -O3 -DNDEBUG -std=c11
   INCLUDES = -ID:/Code/idrto/curl_fo/include -ID:/Code/idrto/curl_fo/src
@@ -359,7 +389,7 @@ build CMakeFiles/curl_fo_shim.dir/src/cache.c.obj: C_COMPILER__curl_fo_shim_unsc
 
 build CMakeFiles/curl_fo_shim.dir/src/probe.c.obj: C_COMPILER__curl_fo_shim_unscanned_Release D$:/Code/idrto/curl_fo/src/probe.c || cmake_object_order_depends_target_curl_fo_shim
   CONFIG = Release
-  DEFINES = -DCURL_FO_BUILDING -DCURL_FO_SHIM_BUILD -Dcurl_fo_shim_EXPORTS
+  DEFINES = -DBUILDING_LIBCURL -DCURL_FO_BUILDING -DCURL_FO_SHIM_BUILD -Dcurl_fo_shim_EXPORTS
   DEP_FILE = CMakeFiles\curl_fo_shim.dir\src\probe.c.obj.d
   FLAGS = -O3 -DNDEBUG -std=c11
   INCLUDES = -ID:/Code/idrto/curl_fo/include -ID:/Code/idrto/curl_fo/src
@@ -369,7 +399,7 @@ build CMakeFiles/curl_fo_shim.dir/src/probe.c.obj: C_COMPILER__curl_fo_shim_unsc
 
 build CMakeFiles/curl_fo_shim.dir/src/http.c.obj: C_COMPILER__curl_fo_shim_unscanned_Release D$:/Code/idrto/curl_fo/src/http.c || cmake_object_order_depends_target_curl_fo_shim
   CONFIG = Release
-  DEFINES = -DCURL_FO_BUILDING -DCURL_FO_SHIM_BUILD -Dcurl_fo_shim_EXPORTS
+  DEFINES = -DBUILDING_LIBCURL -DCURL_FO_BUILDING -DCURL_FO_SHIM_BUILD -Dcurl_fo_shim_EXPORTS
   DEP_FILE = CMakeFiles\curl_fo_shim.dir\src\http.c.obj.d
   FLAGS = -O3 -DNDEBUG -std=c11
   INCLUDES = -ID:/Code/idrto/curl_fo/include -ID:/Code/idrto/curl_fo/src
@@ -379,7 +409,7 @@ build CMakeFiles/curl_fo_shim.dir/src/http.c.obj: C_COMPILER__curl_fo_shim_unsca
 
 build CMakeFiles/curl_fo_shim.dir/src/ws.c.obj: C_COMPILER__curl_fo_shim_unscanned_Release D$:/Code/idrto/curl_fo/src/ws.c || cmake_object_order_depends_target_curl_fo_shim
   CONFIG = Release
-  DEFINES = -DCURL_FO_BUILDING -DCURL_FO_SHIM_BUILD -Dcurl_fo_shim_EXPORTS
+  DEFINES = -DBUILDING_LIBCURL -DCURL_FO_BUILDING -DCURL_FO_SHIM_BUILD -Dcurl_fo_shim_EXPORTS
   DEP_FILE = CMakeFiles\curl_fo_shim.dir\src\ws.c.obj.d
   FLAGS = -O3 -DNDEBUG -std=c11
   INCLUDES = -ID:/Code/idrto/curl_fo/include -ID:/Code/idrto/curl_fo/src
@@ -389,7 +419,7 @@ build CMakeFiles/curl_fo_shim.dir/src/ws.c.obj: C_COMPILER__curl_fo_shim_unscann
 
 build CMakeFiles/curl_fo_shim.dir/src/handle.c.obj: C_COMPILER__curl_fo_shim_unscanned_Release D$:/Code/idrto/curl_fo/src/handle.c || cmake_object_order_depends_target_curl_fo_shim
   CONFIG = Release
-  DEFINES = -DCURL_FO_BUILDING -DCURL_FO_SHIM_BUILD -Dcurl_fo_shim_EXPORTS
+  DEFINES = -DBUILDING_LIBCURL -DCURL_FO_BUILDING -DCURL_FO_SHIM_BUILD -Dcurl_fo_shim_EXPORTS
   DEP_FILE = CMakeFiles\curl_fo_shim.dir\src\handle.c.obj.d
   FLAGS = -O3 -DNDEBUG -std=c11
   INCLUDES = -ID:/Code/idrto/curl_fo/include -ID:/Code/idrto/curl_fo/src
@@ -399,7 +429,7 @@ build CMakeFiles/curl_fo_shim.dir/src/handle.c.obj: C_COMPILER__curl_fo_shim_uns
 
 build CMakeFiles/curl_fo_shim.dir/src/curl_dispatch.c.obj: C_COMPILER__curl_fo_shim_unscanned_Release D$:/Code/idrto/curl_fo/src/curl_dispatch.c || cmake_object_order_depends_target_curl_fo_shim
   CONFIG = Release
-  DEFINES = -DCURL_FO_BUILDING -DCURL_FO_SHIM_BUILD -Dcurl_fo_shim_EXPORTS
+  DEFINES = -DBUILDING_LIBCURL -DCURL_FO_BUILDING -DCURL_FO_SHIM_BUILD -Dcurl_fo_shim_EXPORTS
   DEP_FILE = CMakeFiles\curl_fo_shim.dir\src\curl_dispatch.c.obj.d
   FLAGS = -O3 -DNDEBUG -std=c11
   INCLUDES = -ID:/Code/idrto/curl_fo/include -ID:/Code/idrto/curl_fo/src
@@ -409,7 +439,7 @@ build CMakeFiles/curl_fo_shim.dir/src/curl_dispatch.c.obj: C_COMPILER__curl_fo_s
 
 build CMakeFiles/curl_fo_shim.dir/src/shim_ctx.c.obj: C_COMPILER__curl_fo_shim_unscanned_Release D$:/Code/idrto/curl_fo/src/shim_ctx.c || cmake_object_order_depends_target_curl_fo_shim
   CONFIG = Release
-  DEFINES = -DCURL_FO_BUILDING -DCURL_FO_SHIM_BUILD -Dcurl_fo_shim_EXPORTS
+  DEFINES = -DBUILDING_LIBCURL -DCURL_FO_BUILDING -DCURL_FO_SHIM_BUILD -Dcurl_fo_shim_EXPORTS
   DEP_FILE = CMakeFiles\curl_fo_shim.dir\src\shim_ctx.c.obj.d
   FLAGS = -O3 -DNDEBUG -std=c11
   INCLUDES = -ID:/Code/idrto/curl_fo/include -ID:/Code/idrto/curl_fo/src
@@ -425,7 +455,7 @@ build CMakeFiles/curl_fo_shim.dir/src/shim_ctx.c.obj: C_COMPILER__curl_fo_shim_u
 #############################################
 # Link the shared library libcurl_fo_shim.dll
 
-build libcurl_fo_shim.dll libcurl_fo_shim.dll.a: C_SHARED_LIBRARY_LINKER__curl_fo_shim_Release CMakeFiles/curl_fo_shim.dir/src/shim.c.obj CMakeFiles/curl_fo_shim.dir/src/config.c.obj CMakeFiles/curl_fo_shim.dir/src/util.c.obj CMakeFiles/curl_fo_shim.dir/src/dns.c.obj CMakeFiles/curl_fo_shim.dir/src/cache.c.obj CMakeFiles/curl_fo_shim.dir/src/probe.c.obj CMakeFiles/curl_fo_shim.dir/src/http.c.obj CMakeFiles/curl_fo_shim.dir/src/ws.c.obj CMakeFiles/curl_fo_shim.dir/src/handle.c.obj CMakeFiles/curl_fo_shim.dir/src/curl_dispatch.c.obj CMakeFiles/curl_fo_shim.dir/src/shim_ctx.c.obj
+build libcurl_fo_shim.dll libcurl_fo_shim.dll.a: C_SHARED_LIBRARY_LINKER__curl_fo_shim_Release CMakeFiles/curl_fo_shim.dir/src/shim.c.obj CMakeFiles/curl_fo_shim.dir/src/config.c.obj CMakeFiles/curl_fo_shim.dir/src/log.c.obj CMakeFiles/curl_fo_shim.dir/src/util.c.obj CMakeFiles/curl_fo_shim.dir/src/dns.c.obj CMakeFiles/curl_fo_shim.dir/src/cache.c.obj CMakeFiles/curl_fo_shim.dir/src/probe.c.obj CMakeFiles/curl_fo_shim.dir/src/http.c.obj CMakeFiles/curl_fo_shim.dir/src/ws.c.obj CMakeFiles/curl_fo_shim.dir/src/handle.c.obj CMakeFiles/curl_fo_shim.dir/src/curl_dispatch.c.obj CMakeFiles/curl_fo_shim.dir/src/shim_ctx.c.obj
   CONFIG = Release
   LANGUAGE_COMPILE_FLAGS = -O3 -DNDEBUG
   LINK_FLAGS = -shared
@@ -450,7 +480,7 @@ build cmake_object_order_depends_target_curl_fo_wrapper: phony || .
 
 build CMakeFiles/curl_fo_wrapper.dir/src/wrapper.c.obj: C_COMPILER__curl_fo_wrapper_unscanned_Release D$:/Code/idrto/curl_fo/src/wrapper.c || cmake_object_order_depends_target_curl_fo_wrapper
   CONFIG = Release
-  DEFINES = -DCURL_FO_BUILDING -DCURL_FO_WRAPPER_BUILD -Dcurl_fo_wrapper_EXPORTS
+  DEFINES = -DBUILDING_LIBCURL -DCURL_FO_BUILDING -DCURL_FO_WRAPPER_BUILD -Dcurl_fo_wrapper_EXPORTS
   DEP_FILE = CMakeFiles\curl_fo_wrapper.dir\src\wrapper.c.obj.d
   FLAGS = -O3 -DNDEBUG -std=c11
   INCLUDES = -ID:/Code/idrto/curl_fo/include -ID:/Code/idrto/curl_fo/src
@@ -460,8 +490,18 @@ build CMakeFiles/curl_fo_wrapper.dir/src/wrapper.c.obj: C_COMPILER__curl_fo_wrap
 
 build CMakeFiles/curl_fo_wrapper.dir/src/config.c.obj: C_COMPILER__curl_fo_wrapper_unscanned_Release D$:/Code/idrto/curl_fo/src/config.c || cmake_object_order_depends_target_curl_fo_wrapper
   CONFIG = Release
-  DEFINES = -DCURL_FO_BUILDING -DCURL_FO_WRAPPER_BUILD -Dcurl_fo_wrapper_EXPORTS
+  DEFINES = -DBUILDING_LIBCURL -DCURL_FO_BUILDING -DCURL_FO_WRAPPER_BUILD -Dcurl_fo_wrapper_EXPORTS
   DEP_FILE = CMakeFiles\curl_fo_wrapper.dir\src\config.c.obj.d
+  FLAGS = -O3 -DNDEBUG -std=c11
+  INCLUDES = -ID:/Code/idrto/curl_fo/include -ID:/Code/idrto/curl_fo/src
+  OBJECT_DIR = CMakeFiles\curl_fo_wrapper.dir
+  OBJECT_FILE_DIR = CMakeFiles\curl_fo_wrapper.dir\src
+  TARGET_SUPPORT_DIR = CMakeFiles\curl_fo_wrapper.dir
+
+build CMakeFiles/curl_fo_wrapper.dir/src/log.c.obj: C_COMPILER__curl_fo_wrapper_unscanned_Release D$:/Code/idrto/curl_fo/src/log.c || cmake_object_order_depends_target_curl_fo_wrapper
+  CONFIG = Release
+  DEFINES = -DBUILDING_LIBCURL -DCURL_FO_BUILDING -DCURL_FO_WRAPPER_BUILD -Dcurl_fo_wrapper_EXPORTS
+  DEP_FILE = CMakeFiles\curl_fo_wrapper.dir\src\log.c.obj.d
   FLAGS = -O3 -DNDEBUG -std=c11
   INCLUDES = -ID:/Code/idrto/curl_fo/include -ID:/Code/idrto/curl_fo/src
   OBJECT_DIR = CMakeFiles\curl_fo_wrapper.dir
@@ -470,7 +510,7 @@ build CMakeFiles/curl_fo_wrapper.dir/src/config.c.obj: C_COMPILER__curl_fo_wrapp
 
 build CMakeFiles/curl_fo_wrapper.dir/src/util.c.obj: C_COMPILER__curl_fo_wrapper_unscanned_Release D$:/Code/idrto/curl_fo/src/util.c || cmake_object_order_depends_target_curl_fo_wrapper
   CONFIG = Release
-  DEFINES = -DCURL_FO_BUILDING -DCURL_FO_WRAPPER_BUILD -Dcurl_fo_wrapper_EXPORTS
+  DEFINES = -DBUILDING_LIBCURL -DCURL_FO_BUILDING -DCURL_FO_WRAPPER_BUILD -Dcurl_fo_wrapper_EXPORTS
   DEP_FILE = CMakeFiles\curl_fo_wrapper.dir\src\util.c.obj.d
   FLAGS = -O3 -DNDEBUG -std=c11
   INCLUDES = -ID:/Code/idrto/curl_fo/include -ID:/Code/idrto/curl_fo/src
@@ -480,7 +520,7 @@ build CMakeFiles/curl_fo_wrapper.dir/src/util.c.obj: C_COMPILER__curl_fo_wrapper
 
 build CMakeFiles/curl_fo_wrapper.dir/src/dns.c.obj: C_COMPILER__curl_fo_wrapper_unscanned_Release D$:/Code/idrto/curl_fo/src/dns.c || cmake_object_order_depends_target_curl_fo_wrapper
   CONFIG = Release
-  DEFINES = -DCURL_FO_BUILDING -DCURL_FO_WRAPPER_BUILD -Dcurl_fo_wrapper_EXPORTS
+  DEFINES = -DBUILDING_LIBCURL -DCURL_FO_BUILDING -DCURL_FO_WRAPPER_BUILD -Dcurl_fo_wrapper_EXPORTS
   DEP_FILE = CMakeFiles\curl_fo_wrapper.dir\src\dns.c.obj.d
   FLAGS = -O3 -DNDEBUG -std=c11
   INCLUDES = -ID:/Code/idrto/curl_fo/include -ID:/Code/idrto/curl_fo/src
@@ -490,7 +530,7 @@ build CMakeFiles/curl_fo_wrapper.dir/src/dns.c.obj: C_COMPILER__curl_fo_wrapper_
 
 build CMakeFiles/curl_fo_wrapper.dir/src/cache.c.obj: C_COMPILER__curl_fo_wrapper_unscanned_Release D$:/Code/idrto/curl_fo/src/cache.c || cmake_object_order_depends_target_curl_fo_wrapper
   CONFIG = Release
-  DEFINES = -DCURL_FO_BUILDING -DCURL_FO_WRAPPER_BUILD -Dcurl_fo_wrapper_EXPORTS
+  DEFINES = -DBUILDING_LIBCURL -DCURL_FO_BUILDING -DCURL_FO_WRAPPER_BUILD -Dcurl_fo_wrapper_EXPORTS
   DEP_FILE = CMakeFiles\curl_fo_wrapper.dir\src\cache.c.obj.d
   FLAGS = -O3 -DNDEBUG -std=c11
   INCLUDES = -ID:/Code/idrto/curl_fo/include -ID:/Code/idrto/curl_fo/src
@@ -500,7 +540,7 @@ build CMakeFiles/curl_fo_wrapper.dir/src/cache.c.obj: C_COMPILER__curl_fo_wrappe
 
 build CMakeFiles/curl_fo_wrapper.dir/src/probe.c.obj: C_COMPILER__curl_fo_wrapper_unscanned_Release D$:/Code/idrto/curl_fo/src/probe.c || cmake_object_order_depends_target_curl_fo_wrapper
   CONFIG = Release
-  DEFINES = -DCURL_FO_BUILDING -DCURL_FO_WRAPPER_BUILD -Dcurl_fo_wrapper_EXPORTS
+  DEFINES = -DBUILDING_LIBCURL -DCURL_FO_BUILDING -DCURL_FO_WRAPPER_BUILD -Dcurl_fo_wrapper_EXPORTS
   DEP_FILE = CMakeFiles\curl_fo_wrapper.dir\src\probe.c.obj.d
   FLAGS = -O3 -DNDEBUG -std=c11
   INCLUDES = -ID:/Code/idrto/curl_fo/include -ID:/Code/idrto/curl_fo/src
@@ -510,7 +550,7 @@ build CMakeFiles/curl_fo_wrapper.dir/src/probe.c.obj: C_COMPILER__curl_fo_wrappe
 
 build CMakeFiles/curl_fo_wrapper.dir/src/http.c.obj: C_COMPILER__curl_fo_wrapper_unscanned_Release D$:/Code/idrto/curl_fo/src/http.c || cmake_object_order_depends_target_curl_fo_wrapper
   CONFIG = Release
-  DEFINES = -DCURL_FO_BUILDING -DCURL_FO_WRAPPER_BUILD -Dcurl_fo_wrapper_EXPORTS
+  DEFINES = -DBUILDING_LIBCURL -DCURL_FO_BUILDING -DCURL_FO_WRAPPER_BUILD -Dcurl_fo_wrapper_EXPORTS
   DEP_FILE = CMakeFiles\curl_fo_wrapper.dir\src\http.c.obj.d
   FLAGS = -O3 -DNDEBUG -std=c11
   INCLUDES = -ID:/Code/idrto/curl_fo/include -ID:/Code/idrto/curl_fo/src
@@ -520,7 +560,7 @@ build CMakeFiles/curl_fo_wrapper.dir/src/http.c.obj: C_COMPILER__curl_fo_wrapper
 
 build CMakeFiles/curl_fo_wrapper.dir/src/ws.c.obj: C_COMPILER__curl_fo_wrapper_unscanned_Release D$:/Code/idrto/curl_fo/src/ws.c || cmake_object_order_depends_target_curl_fo_wrapper
   CONFIG = Release
-  DEFINES = -DCURL_FO_BUILDING -DCURL_FO_WRAPPER_BUILD -Dcurl_fo_wrapper_EXPORTS
+  DEFINES = -DBUILDING_LIBCURL -DCURL_FO_BUILDING -DCURL_FO_WRAPPER_BUILD -Dcurl_fo_wrapper_EXPORTS
   DEP_FILE = CMakeFiles\curl_fo_wrapper.dir\src\ws.c.obj.d
   FLAGS = -O3 -DNDEBUG -std=c11
   INCLUDES = -ID:/Code/idrto/curl_fo/include -ID:/Code/idrto/curl_fo/src
@@ -530,7 +570,7 @@ build CMakeFiles/curl_fo_wrapper.dir/src/ws.c.obj: C_COMPILER__curl_fo_wrapper_u
 
 build CMakeFiles/curl_fo_wrapper.dir/src/handle.c.obj: C_COMPILER__curl_fo_wrapper_unscanned_Release D$:/Code/idrto/curl_fo/src/handle.c || cmake_object_order_depends_target_curl_fo_wrapper
   CONFIG = Release
-  DEFINES = -DCURL_FO_BUILDING -DCURL_FO_WRAPPER_BUILD -Dcurl_fo_wrapper_EXPORTS
+  DEFINES = -DBUILDING_LIBCURL -DCURL_FO_BUILDING -DCURL_FO_WRAPPER_BUILD -Dcurl_fo_wrapper_EXPORTS
   DEP_FILE = CMakeFiles\curl_fo_wrapper.dir\src\handle.c.obj.d
   FLAGS = -O3 -DNDEBUG -std=c11
   INCLUDES = -ID:/Code/idrto/curl_fo/include -ID:/Code/idrto/curl_fo/src
@@ -540,7 +580,7 @@ build CMakeFiles/curl_fo_wrapper.dir/src/handle.c.obj: C_COMPILER__curl_fo_wrapp
 
 build CMakeFiles/curl_fo_wrapper.dir/src/curl_dispatch.c.obj: C_COMPILER__curl_fo_wrapper_unscanned_Release D$:/Code/idrto/curl_fo/src/curl_dispatch.c || cmake_object_order_depends_target_curl_fo_wrapper
   CONFIG = Release
-  DEFINES = -DCURL_FO_BUILDING -DCURL_FO_WRAPPER_BUILD -Dcurl_fo_wrapper_EXPORTS
+  DEFINES = -DBUILDING_LIBCURL -DCURL_FO_BUILDING -DCURL_FO_WRAPPER_BUILD -Dcurl_fo_wrapper_EXPORTS
   DEP_FILE = CMakeFiles\curl_fo_wrapper.dir\src\curl_dispatch.c.obj.d
   FLAGS = -O3 -DNDEBUG -std=c11
   INCLUDES = -ID:/Code/idrto/curl_fo/include -ID:/Code/idrto/curl_fo/src
@@ -550,7 +590,7 @@ build CMakeFiles/curl_fo_wrapper.dir/src/curl_dispatch.c.obj: C_COMPILER__curl_f
 
 build CMakeFiles/curl_fo_wrapper.dir/src/shim_ctx.c.obj: C_COMPILER__curl_fo_wrapper_unscanned_Release D$:/Code/idrto/curl_fo/src/shim_ctx.c || cmake_object_order_depends_target_curl_fo_wrapper
   CONFIG = Release
-  DEFINES = -DCURL_FO_BUILDING -DCURL_FO_WRAPPER_BUILD -Dcurl_fo_wrapper_EXPORTS
+  DEFINES = -DBUILDING_LIBCURL -DCURL_FO_BUILDING -DCURL_FO_WRAPPER_BUILD -Dcurl_fo_wrapper_EXPORTS
   DEP_FILE = CMakeFiles\curl_fo_wrapper.dir\src\shim_ctx.c.obj.d
   FLAGS = -O3 -DNDEBUG -std=c11
   INCLUDES = -ID:/Code/idrto/curl_fo/include -ID:/Code/idrto/curl_fo/src
@@ -566,7 +606,7 @@ build CMakeFiles/curl_fo_wrapper.dir/src/shim_ctx.c.obj: C_COMPILER__curl_fo_wra
 #############################################
 # Link the shared library libcurl_fo_wrapper.dll
 
-build libcurl_fo_wrapper.dll libcurl_fo_wrapper.dll.a: C_SHARED_LIBRARY_LINKER__curl_fo_wrapper_Release CMakeFiles/curl_fo_wrapper.dir/src/wrapper.c.obj CMakeFiles/curl_fo_wrapper.dir/src/config.c.obj CMakeFiles/curl_fo_wrapper.dir/src/util.c.obj CMakeFiles/curl_fo_wrapper.dir/src/dns.c.obj CMakeFiles/curl_fo_wrapper.dir/src/cache.c.obj CMakeFiles/curl_fo_wrapper.dir/src/probe.c.obj CMakeFiles/curl_fo_wrapper.dir/src/http.c.obj CMakeFiles/curl_fo_wrapper.dir/src/ws.c.obj CMakeFiles/curl_fo_wrapper.dir/src/handle.c.obj CMakeFiles/curl_fo_wrapper.dir/src/curl_dispatch.c.obj CMakeFiles/curl_fo_wrapper.dir/src/shim_ctx.c.obj
+build libcurl_fo_wrapper.dll libcurl_fo_wrapper.dll.a: C_SHARED_LIBRARY_LINKER__curl_fo_wrapper_Release CMakeFiles/curl_fo_wrapper.dir/src/wrapper.c.obj CMakeFiles/curl_fo_wrapper.dir/src/config.c.obj CMakeFiles/curl_fo_wrapper.dir/src/log.c.obj CMakeFiles/curl_fo_wrapper.dir/src/util.c.obj CMakeFiles/curl_fo_wrapper.dir/src/dns.c.obj CMakeFiles/curl_fo_wrapper.dir/src/cache.c.obj CMakeFiles/curl_fo_wrapper.dir/src/probe.c.obj CMakeFiles/curl_fo_wrapper.dir/src/http.c.obj CMakeFiles/curl_fo_wrapper.dir/src/ws.c.obj CMakeFiles/curl_fo_wrapper.dir/src/handle.c.obj CMakeFiles/curl_fo_wrapper.dir/src/curl_dispatch.c.obj CMakeFiles/curl_fo_wrapper.dir/src/shim_ctx.c.obj
   CONFIG = Release
   LANGUAGE_COMPILE_FLAGS = -O3 -DNDEBUG
   LINK_FLAGS = -shared
@@ -717,44 +757,6 @@ build curl_fo_tests.exe: C_EXECUTABLE_LINKER__curl_fo_tests_Release CMakeFiles/c
   TARGET_PDB = curl_fo_tests.exe.dbg
   TARGET_SUPPORT_DIR = CMakeFiles\curl_fo_tests.dir
 
-# =============================================================================
-# Object build statements for EXECUTABLE target curl_fo_example
-
-
-#############################################
-# Order-only phony target for curl_fo_example
-
-build cmake_object_order_depends_target_curl_fo_example: phony || cmake_object_order_depends_target_curl_fo
-
-build CMakeFiles/curl_fo_example.dir/examples/simple_http.c.obj: C_COMPILER__curl_fo_example_unscanned_Release D$:/Code/idrto/curl_fo/examples/simple_http.c || cmake_object_order_depends_target_curl_fo_example
-  CONFIG = Release
-  DEP_FILE = CMakeFiles\curl_fo_example.dir\examples\simple_http.c.obj.d
-  FLAGS = -O3 -DNDEBUG -std=c11
-  INCLUDES = -ID:/Code/idrto/curl_fo/include
-  OBJECT_DIR = CMakeFiles\curl_fo_example.dir
-  OBJECT_FILE_DIR = CMakeFiles\curl_fo_example.dir\examples
-  TARGET_SUPPORT_DIR = CMakeFiles\curl_fo_example.dir
-
-
-# =============================================================================
-# Link build statements for EXECUTABLE target curl_fo_example
-
-
-#############################################
-# Link the executable curl_fo_example.exe
-
-build curl_fo_example.exe: C_EXECUTABLE_LINKER__curl_fo_example_Release CMakeFiles/curl_fo_example.dir/examples/simple_http.c.obj | libcurl_fo.dll.a C$:/msys64/mingw64/lib/libcurl.dll.a || libcurl_fo.dll
-  CONFIG = Release
-  FLAGS = -O3 -DNDEBUG
-  LINK_LIBRARIES = libcurl_fo.dll.a  C:/msys64/mingw64/lib/libcurl.dll.a  -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32
-  OBJECT_DIR = CMakeFiles\curl_fo_example.dir
-  POST_BUILD = cd .
-  PRE_LINK = cd .
-  TARGET_FILE = curl_fo_example.exe
-  TARGET_IMPLIB = libcurl_fo_example.dll.a
-  TARGET_PDB = curl_fo_example.exe.dbg
-  TARGET_SUPPORT_DIR = CMakeFiles\curl_fo_example.dir
-
 
 #############################################
 # Utility command for test
@@ -839,8 +841,6 @@ build curl-fo: phony curl-fo.exe
 
 build curl_fo: phony libcurl_fo.dll
 
-build curl_fo_example: phony curl_fo_example.exe
-
 build curl_fo_shim: phony libcurl_fo_shim.dll
 
 build curl_fo_static: phony libcurl_fo_static.a
@@ -857,7 +857,7 @@ build curl_fo_wrapper: phony libcurl_fo_wrapper.dll
 #############################################
 # Folder: D:/Code/idrto/curl_fo/build-msys
 
-build all: phony libcurl_fo.dll libcurl_fo_static.a libcurl_fo_shim.dll libcurl_fo_wrapper.dll curl-fo.exe curl_fo_tests.exe curl_fo_example.exe
+build all: phony libcurl_fo.dll libcurl_fo_static.a libcurl_fo_shim.dll libcurl_fo_wrapper.dll curl-fo.exe curl_fo_tests.exe
 
 # =============================================================================
 # Built-in targets

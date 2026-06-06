@@ -89,6 +89,17 @@ void cf_config_set_default_ttl_sec(cf_config *cfg, unsigned ttl_sec)
         cfg->default_ttl_sec = ttl_sec;
 }
 
+void cf_config_set_verbose(cf_config *cfg, int on)
+{
+    if (cfg)
+        cfg->verbose = on ? 1 : 0;
+}
+
+int cf_config_get_verbose(const cf_config *cfg)
+{
+    return cfg && cfg->verbose;
+}
+
 size_t cf_config_get_lru_capacity(const cf_config *cfg)
 {
     return cfg ? cfg->lru_capacity : CF_DEFAULT_LRU;
@@ -148,4 +159,7 @@ void cf_config_load_env(cf_config *cfg)
     const char *hdr = getenv("CURL_FO_IDEMPOTENCY_HEADER");
     if (hdr && *hdr)
         cf_config_set_idempotency_header(cfg, hdr);
+    const char *verb = getenv("CURL_FO_VERBOSE");
+    if (verb && *verb && verb[0] != '0')
+        cfg->verbose = 1;
 }
