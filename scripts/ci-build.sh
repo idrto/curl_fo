@@ -6,28 +6,40 @@ TRIPLE="${1:?triple required}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD="$ROOT/build-${TRIPLE}"
 VERSION="1.0.0"
+VCPKG_ROOT="$(cd "${VCPKG_ROOT:-$ROOT/vcpkg}" && pwd)"
+TOOLCHAIN="$ROOT/cmake/vcpkg-init.cmake"
+OVERLAY="$ROOT/triplets"
 
-CMAKE_COMMON=(
+export VCPKG_ROOT
+unset CMAKE_TOOLCHAIN_FILE
+
+CMAKE_NATIVE=(
     -G Ninja
     -DCMAKE_BUILD_TYPE=Release
     -DCURL_FO_BUILD_TESTS=OFF
     -DCURL_FO_BUILD_EXAMPLE=OFF
 )
 
-build_cmake() {
-    cmake -S "$ROOT" -B "$BUILD" "$@"
+build_native() {
+    rm -rf "$BUILD"
+    cmake -S "$ROOT" -B "$BUILD" "${CMAKE_NATIVE[@]}" "$@"
     cmake --build "$BUILD" --parallel
 }
 
-vcpkg_build() {
+build_vcpkg() {
     local triplet="$1"
     shift
-    local overlay="$ROOT/triplets"
-    "$VCPKG_ROOT/vcpkg" install "curl:${triplet}" --overlay-triplets="$overlay"
-    build_cmake "${CMAKE_COMMON[@]}" \
-        -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
-        -DVCPKG_TARGET_TRIPLET="${triplet}" \
+    [ -f "$TOOLCHAIN" ] || { echo "Missing toolchain: $TOOLCHAIN"; exit 1; }
+    rm -rf "$BUILD"
+    cmake -S "$ROOT" -B "$BUILD" -G Ninja \
+        -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN" \
+        -DVCPKG_TARGET_TRIPLET="$triplet" \
+        -DVCPKG_OVERLAY_TRIPLETS="$OVERLAY" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCURL_FO_BUILD_TESTS=OFF \
+        -DCURL_FO_BUILD_EXAMPLE=OFF \
         "$@"
+    cmake --build "$BUILD" --parallel
 }
 
 macos_curl_prefix() {
@@ -40,45 +52,45 @@ macos_curl_prefix() {
 
 case "$TRIPLE" in
     x86_64-unknown-linux-gnu|aarch64-unknown-linux-gnu)
-        build_cmake "${CMAKE_COMMON[@]}"
+        build_native
         ;;
     x86_64-apple-darwin)
         PREFIX="$(macos_curl_prefix)"
-        build_cmake "${CMAKE_COMMON[@]}" \
+        build_native \
             -DCMAKE_OSX_ARCHITECTURES=x86_64 \
             -DCMAKE_PREFIX_PATH="${PREFIX}" \
             -DCURL_ROOT="${PREFIX}"
         ;;
     aarch64-apple-darwin)
         PREFIX="$(macos_curl_prefix)"
-        build_cmake "${CMAKE_COMMON[@]}" \
+        build_native \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
             -DCMAKE_PREFIX_PATH="${PREFIX}" \
             -DCURL_ROOT="${PREFIX}"
         ;;
     x86_64-pc-windows-msvc)
-        vcpkg_build x64-windows
+        build_vcpkg x64-windows
         ;;
     aarch64-pc-windows-msvc)
-        vcpkg_build arm64-windows
+        build_vcpkg arm64-windows
         ;;
     aarch64-linux-android)
-        vcpkg_build arm64-android -DCURL_FO_MOBILE_BUILD=ON
+        build_vcpkg arm64-android -DCURL_FO_MOBILE_BUILD=ON
         ;;
     armv7-linux-androideabi)
-        vcpkg_build arm-neon-android -DCURL_FO_MOBILE_BUILD=ON
+        build_vcpkg arm-neon-android -DCURL_FO_MOBILE_BUILD=ON
         ;;
     x86_64-linux-android)
-        vcpkg_build x64-android -DCURL_FO_MOBILE_BUILD=ON
+        build_vcpkg x64-android -DCURL_FO_MOBILE_BUILD=ON
         ;;
     aarch64-apple-ios)
-        vcpkg_build arm64-ios -DCURL_FO_MOBILE_BUILD=ON
+        build_vcpkg arm64-ios -DCURL_FO_MOBILE_BUILD=ON
         ;;
     aarch64-apple-ios-sim)
-        vcpkg_build arm64-ios-simulator -DCURL_FO_MOBILE_BUILD=ON
+        build_vcpkg arm64-ios-simulator -DCURL_FO_MOBILE_BUILD=ON
         ;;
     x86_64-apple-ios-sim)
-        vcpkg_build x64-ios-simulator -DCURL_FO_MOBILE_BUILD=ON
+        build_vcpkg x64-ios-simulator -DCURL_FO_MOBILE_BUILD=ON
         ;;
     *)
         echo "Unknown triple: $TRIPLE"; exit 1 ;;

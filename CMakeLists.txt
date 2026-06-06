@@ -20,34 +20,31 @@ if(CURL_FO_MOBILE_BUILD)
     set(CURL_FO_BUILD_EXAMPLE OFF CACHE BOOL "" FORCE)
 endif()
 
-# Allow -DCURL_ROOT= or -DCURL_INCLUDE_DIR= / -DCURL_LIBRARY=
-if(DEFINED ENV{VCPKG_ROOT})
-    if(DEFINED VCPKG_TARGET_TRIPLET)
-        list(APPEND CMAKE_PREFIX_PATH "$ENV{VCPKG_ROOT}/installed/${VCPKG_TARGET_TRIPLET}")
-    else()
-        list(APPEND CMAKE_PREFIX_PATH "$ENV{VCPKG_ROOT}/installed/x64-windows")
+# libcurl: vcpkg CONFIG when cross-compiling; system package on native desktop.
+if(CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg")
+    find_package(CURL CONFIG REQUIRED)
+else()
+    find_package(CURL QUIET)
+    if(NOT CURL_FOUND)
+        find_path(CURL_INCLUDE_DIR NAMES curl/curl.h
+            HINTS "${CURL_ROOT}/include" "C:/curl/include" "$ENV{CURL_ROOT}/include"
+                  "${CMAKE_SOURCE_DIR}/deps/install/include")
+        find_library(CURL_LIBRARY NAMES curl libcurl libcurl_imp libcurl.a
+            HINTS "${CURL_ROOT}/lib" "C:/curl/lib" "$ENV{CURL_ROOT}/lib"
+                  "${CMAKE_SOURCE_DIR}/deps/install/lib")
+        if(CURL_INCLUDE_DIR AND CURL_LIBRARY)
+            add_library(CURL::libcurl UNKNOWN IMPORTED)
+            set_target_properties(CURL::libcurl PROPERTIES
+                IMPORTED_LOCATION "${CURL_LIBRARY}"
+                INTERFACE_INCLUDE_DIRECTORIES "${CURL_INCLUDE_DIR}")
+            set(CURL_FOUND TRUE)
+        endif()
     endif()
-endif()
-find_package(CURL QUIET)
-if(NOT CURL_FOUND)
-    find_path(CURL_INCLUDE_DIR NAMES curl/curl.h
-        HINTS "${CURL_ROOT}/include" "C:/curl/include" "$ENV{CURL_ROOT}/include"
-              "${CMAKE_SOURCE_DIR}/deps/install/include")
-    find_library(CURL_LIBRARY NAMES curl libcurl libcurl_imp libcurl.a
-        HINTS "${CURL_ROOT}/lib" "C:/curl/lib" "$ENV{CURL_ROOT}/lib"
-              "${CMAKE_SOURCE_DIR}/deps/install/lib")
-    if(CURL_INCLUDE_DIR AND CURL_LIBRARY)
-        add_library(CURL::libcurl UNKNOWN IMPORTED)
-        set_target_properties(CURL::libcurl PROPERTIES
-            IMPORTED_LOCATION "${CURL_LIBRARY}"
-            INTERFACE_INCLUDE_DIRECTORIES "${CURL_INCLUDE_DIR}")
-        set(CURL_FOUND TRUE)
+    if(NOT CURL_FOUND)
+        message(FATAL_ERROR
+            "libcurl not found. Install libcurl dev package or pass "
+            "-DCURL_ROOT=<path> with include/ and lib/ subdirs.")
     endif()
-endif()
-if(NOT CURL_FOUND)
-    message(FATAL_ERROR
-        "libcurl not found. Install libcurl dev package or pass "
-        "-DCURL_ROOT=<path> with include/ and lib/ subdirs.")
 endif()
 
 set(CURL_FO_CORE_SOURCES

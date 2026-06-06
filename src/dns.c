@@ -197,7 +197,7 @@ static int cf_dns_query_type(const char *host, uint16_t qtype,
     }
 
     uint8_t resp[1500];
-    ssize_t rlen = recvfrom(sock, (char *)resp, sizeof(resp), 0, NULL, NULL);
+    int rlen = (int)recvfrom(sock, (char *)resp, sizeof(resp), 0, NULL, NULL);
 #ifdef _WIN32
     closesocket(sock);
 #else

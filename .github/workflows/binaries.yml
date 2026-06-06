@@ -88,10 +88,14 @@ jobs:
 
       - name: Install vcpkg mobile prerequisites
         if: matrix.setup == 'vcpkg-mobile'
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
         run: |
           if [ "${{ runner.os }}" = "Linux" ]; then
             sudo apt-get update
             sudo apt-get install -y cmake ninja-build zip curl
+            NDK="$(ls -d "$ANDROID_HOME/ndk/"* 2>/dev/null | sort -V | tail -1)"
+            echo "ANDROID_NDK_HOME=$NDK" >> "$GITHUB_ENV"
           else
             brew install cmake ninja curl
           fi
