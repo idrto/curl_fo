@@ -37,21 +37,22 @@ static int cf_has_proxy(CURL *curl)
     return cf_shadow_get_proxy(curl) != NULL;
 }
 
-static CURLcode cf_perform_with_ip(cf_ctx *ctx, CURL *curl,
-                                   const char *host, uint16_t port,
-                                   const char *ip, const char *req_id,
-                                   cf_method method, size_t attempt,
-                                   size_t total)
+static CURLcode cf_perform_prepared(cf_ctx *ctx, CURL *curl,
+                                    const char *host, uint16_t port,
+                                    const char *ip, const char *req_id,
+                                    cf_method method, size_t attempt,
+                                    size_t total, int preconnected)
 {
     cf_config *cfg = cf_ctx_get_config(ctx);
 
     long timeout = (method == CF_METHOD_GET || method == CF_METHOD_HEAD)
         ? cf_config_get_get_timeout_ms(cfg)
         : cf_config_get_other_timeout_ms(cfg);
-    long connect_to = cf_config_get_connect_timeout_ms(cfg);
+    long connect_to = preconnected ? 0L : cf_config_get_connect_timeout_ms(cfg);
 
-    cf_vlog(cfg, "attempt %zu/%zu using IP %s (RESOLVE %s:%u:%s)\n",
-            attempt, total, ip, host, port, ip);
+    cf_vlog(cfg, "attempt %zu/%zu using IP %s (RESOLVE %s:%u:%s)%s\n",
+            attempt, total, ip, host, port, ip,
+            preconnected ? " [preconnected]" : "");
 
     cf_log_curl_replay(cfg, curl, host, port, ip, req_id, method,
                        timeout, connect_to, 0);
@@ -64,6 +65,18 @@ static CURLcode cf_perform_with_ip(cf_ctx *ctx, CURL *curl,
     struct curl_slist *merged = owned;
     for (struct curl_slist *h = headers; h; h = h->next)
         merged = cf_curl_slist_append(merged, h->data);
+
+    void *shadow = NULL;
+    cf_curl_easy_getinfo(curl, CURLINFO_PRIVATE, &shadow);
+
+    if (preconnected && shadow) {
+        cf_curl_easy_setopt(curl, CURLOPT_OPENSOCKETFUNCTION,
+                            cf_shadow_opensocket_cb);
+        cf_curl_easy_setopt(curl, CURLOPT_OPENSOCKETDATA, shadow);
+        cf_curl_easy_setopt(curl, CURLOPT_CLOSESOCKETFUNCTION,
+                            cf_shadow_closesocket_cb);
+        cf_curl_easy_setopt(curl, CURLOPT_CLOSESOCKETDATA, shadow);
+    }
 
     cf_curl_easy_setopt(curl, CURLOPT_RESOLVE, resolve);
     cf_curl_easy_setopt(curl, CURLOPT_HTTPHEADER, merged);
@@ -82,9 +95,76 @@ static CURLcode cf_perform_with_ip(cf_ctx *ctx, CURL *curl,
 
     cf_curl_easy_setopt(curl, CURLOPT_RESOLVE, NULL);
     cf_curl_easy_setopt(curl, CURLOPT_HTTPHEADER, cf_shadow_get_headers(curl));
+    if (preconnected) {
+        cf_curl_easy_setopt(curl, CURLOPT_OPENSOCKETFUNCTION, NULL);
+        cf_curl_easy_setopt(curl, CURLOPT_CLOSESOCKETFUNCTION, NULL);
+    }
     cf_curl_slist_free_all(resolve);
     cf_curl_slist_free_all(owned);
     return rc;
+}
+
+static CURLcode cf_perform_with_ip(cf_ctx *ctx, CURL *curl,
+                                   const char *host, uint16_t port,
+                                   const char *ip, const char *req_id,
+                                   cf_method method, size_t attempt,
+                                   size_t total)
+{
+    return cf_perform_prepared(ctx, curl, host, port, ip, req_id, method,
+                               attempt, total, 0);
+}
+
+static CURLcode cf_perform_with_raced_socket(cf_ctx *ctx, CURL *curl,
+                                             const char *host, uint16_t port,
+                                             const char *ip, int fd,
+                                             const char *req_id,
+                                             cf_method method)
+{
+    cf_shadow_set_preconnected(curl, fd, ip);
+    return cf_perform_prepared(ctx, curl, host, port, ip, req_id, method,
+                               1, 1, 1);
+}
+
+/**
+ * Returns 1 if HTTP performed via race, 0 if skipped, -1 if race failed.
+ * On return 1, winner_ip_out (size winner_ip_len) holds the winning IP.
+ */
+static int cf_try_tcp_race(cf_ctx *ctx, CURL *curl,
+                           const char *host, uint16_t port,
+                           cf_resolve_view *snap,
+                           const char *req_id, cf_method method,
+                           CURLcode *out_rc,
+                           char *winner_ip_out, size_t winner_ip_len)
+{
+    cf_config *cfg = cf_ctx_get_config(ctx);
+    if (!cf_config_get_tcp_race(cfg))
+        return 0;
+
+    char *addrs[CF_RESOLVE_MAX_IPS];
+    size_t count = 0;
+    for (size_t i = 0; i < snap->all_count && i < CF_RESOLVE_MAX_IPS; i++) {
+        if (snap->all_addrs[i][0])
+            addrs[count++] = snap->all_addrs[i];
+    }
+    if (count < 2)
+        return 0;
+
+    cf_race_result *race = NULL;
+    if (cf_tcp_race(addrs, count, port, cfg, &race) < 0 || !race)
+        return -1;
+
+    int winner_fd = cf_race_winner_fd(race);
+    char winner_ip[64] = {0};
+    strncpy(winner_ip, cf_race_winner_addr(race), sizeof(winner_ip) - 1);
+    if (winner_ip_out && winner_ip_len > 0)
+        strncpy(winner_ip_out, winner_ip, winner_ip_len - 1);
+
+    cf_race_drain_async(ctx, host, port, race);
+
+    *out_rc = cf_perform_with_raced_socket(ctx, curl, host, port,
+                                           winner_ip, winner_fd,
+                                           req_id, method);
+    return 1;
 }
 
 CURLcode cf_easy_perform(cf_ctx *ctx, CURL *curl)
@@ -130,6 +210,50 @@ CURLcode cf_easy_perform(cf_ctx *ctx, CURL *curl)
         }
         cf_vlog(cfg, "multi-address host without ranking — passthrough\n");
         return cf_curl_easy_perform(curl);
+    }
+
+    if (snap.rank_count == 0 && snap.all_count > 1) {
+        CURLcode race_rc = CURLE_OK;
+        char race_winner[64] = {0};
+        int raced = cf_try_tcp_race(ctx, curl, host, port, &snap,
+                                    req_id, method, &race_rc,
+                                    race_winner, sizeof(race_winner));
+        if (raced == 1) {
+            long http_code = 0;
+            cf_curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+            if (!cf_should_failover_cfg(cfg, race_rc, http_code))
+                return race_rc;
+            /*
+             * Race winner failed (transport error or gateway 502/503/504 with
+             * failover_gateway=on).  The async drain hasn't committed ranks yet
+             * so snap.rank_count is still 0.  Retry sequentially over the
+             * remaining all_addrs, skipping the winner that already failed.
+             */
+            cf_vlog(cfg, "race winner %s failed — retrying %zu sibling(s)\n",
+                    race_winner, snap.all_count > 1 ? snap.all_count - 1 : 0);
+            CURLcode last = race_rc;
+            for (size_t i = 0; i < snap.all_count && i < CF_RESOLVE_MAX_IPS; i++) {
+                if (!snap.all_addrs[i][0]) continue;
+                if (strcmp(snap.all_addrs[i], race_winner) == 0) continue;
+                last = cf_perform_with_ip(ctx, curl, host, port,
+                                          snap.all_addrs[i], req_id, method,
+                                          i + 1, snap.all_count);
+                http_code = 0;
+                cf_curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+                if (!cf_should_failover_cfg(cfg, last, http_code)) {
+                    cf_vlog(cfg, "cold fallback to %s succeeded\n",
+                            snap.all_addrs[i]);
+                    return last;
+                }
+                if (i + 1 < snap.all_count)
+                    cf_vlog(cfg, "cold fallback: %s failed — trying next\n",
+                            snap.all_addrs[i]);
+            }
+            return last;
+        } else if (raced < 0) {
+            cf_vlog(cfg, "TCP race failed — passthrough\n");
+            return cf_curl_easy_perform(curl);
+        }
     }
 
     CURLcode last = CURLE_OK;

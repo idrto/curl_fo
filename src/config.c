@@ -30,6 +30,7 @@ cf_config *cf_config_create(void)
     cfg->idempotency_header = strdup(CF_DEFAULT_HEADER);
     cfg->latency_bucket_ms = CF_DEFAULT_BUCKET_MS;
     cfg->default_ttl_sec = CF_DEFAULT_TTL;
+    cfg->tcp_race = 1;
     return cfg;
 }
 
@@ -111,6 +112,17 @@ int cf_config_get_failover_gateway(const cf_config *cfg)
     return cfg && cfg->failover_gateway;
 }
 
+void cf_config_set_tcp_race(cf_config *cfg, int on)
+{
+    if (cfg)
+        cfg->tcp_race = on ? 1 : 0;
+}
+
+int cf_config_get_tcp_race(const cf_config *cfg)
+{
+    return !cfg || cfg->tcp_race;
+}
+
 size_t cf_config_get_lru_capacity(const cf_config *cfg)
 {
     return cfg ? cfg->lru_capacity : CF_DEFAULT_LRU;
@@ -176,4 +188,7 @@ void cf_config_load_env(cf_config *cfg)
     const char *gw = getenv("CURL_FO_FAILOVER_GATEWAY");
     if (gw && *gw && gw[0] != '0')
         cfg->failover_gateway = 1;
+    const char *race = getenv("CURL_FO_TCP_RACE");
+    if (race && *race && race[0] == '0')
+        cfg->tcp_race = 0;
 }

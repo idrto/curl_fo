@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(curl_fo VERSION 1.0.2 LANGUAGES C)
+project(curl_fo VERSION 1.0.3 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -88,12 +88,15 @@ set(CURL_FO_CORE_SOURCES
     src/dns.c
     src/cache.c
     src/probe.c
+    src/connect_race.c
     src/http.c
     src/ws.c
     src/handle.c
     src/curl_dispatch.c
     src/shim_ctx.c
 )
+
+find_package(Threads REQUIRED)
 if(ANDROID)
     list(APPEND CURL_FO_CORE_SOURCES src/android_compat.c)
 endif()
@@ -106,6 +109,7 @@ target_compile_definitions(curl_fo PRIVATE CURL_FO_BUILDING)
 if(NOT ANDROID)
     target_link_libraries(curl_fo PRIVATE CURL::libcurl)
 endif()
+target_link_libraries(curl_fo PRIVATE Threads::Threads)
 set_target_properties(curl_fo PROPERTIES
     VERSION ${PROJECT_VERSION}
     SOVERSION 1
@@ -140,6 +144,7 @@ target_compile_definitions(curl_fo_static PRIVATE CURL_FO_BUILDING)
 if(NOT ANDROID)
     target_link_libraries(curl_fo_static PRIVATE CURL::libcurl)
 endif()
+target_link_libraries(curl_fo_static PRIVATE Threads::Threads)
 if(WIN32)
     target_link_libraries(curl_fo_static PRIVATE ws2_32 iphlpapi advapi32)
 elseif(ANDROID)
@@ -168,7 +173,7 @@ if(CURL_FO_BUILD_SHIM)
     if(WIN32)
         target_compile_definitions(curl_fo_shim PRIVATE BUILDING_LIBCURL)
     endif()
-    target_link_libraries(curl_fo_shim PRIVATE)
+    target_link_libraries(curl_fo_shim PRIVATE Threads::Threads)
     if(WIN32)
         target_link_libraries(curl_fo_shim PRIVATE ws2_32 iphlpapi advapi32)
     endif()
@@ -187,7 +192,7 @@ if(CURL_FO_BUILD_WRAPPER)
     if(WIN32)
         target_compile_definitions(curl_fo_wrapper PRIVATE BUILDING_LIBCURL)
     endif()
-    target_link_libraries(curl_fo_wrapper PRIVATE)
+    target_link_libraries(curl_fo_wrapper PRIVATE Threads::Threads)
     if(WIN32)
         target_link_libraries(curl_fo_wrapper PRIVATE ws2_32 iphlpapi advapi32)
     endif()
@@ -212,13 +217,15 @@ if(CURL_FO_BUILD_TESTS)
         tests/test_failover.c
         tests/test_cache.c
         tests/test_probe.c
+        tests/test_race.c
         tests/test_dns.c
         tests/test_ttl.c
     )
     target_include_directories(curl_fo_tests PRIVATE
         ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
     target_compile_definitions(curl_fo_tests PRIVATE CURL_FO_BUILDING CURL_FO_TESTING)
-    target_link_libraries(curl_fo_tests PRIVATE curl_fo_static CURL::libcurl)
+    target_link_libraries(curl_fo_tests PRIVATE curl_fo_static CURL::libcurl
+        Threads::Threads)
     if(WIN32)
         target_link_libraries(curl_fo_tests PRIVATE ws2_32 iphlpapi advapi32)
     endif()

@@ -88,6 +88,37 @@ void cf_log_probe_ranking(cf_config *cfg, cf_ip_rank *ranks, size_t count)
                 i + 1, ranks[i].addr, ranks[i].raw_ms, ranks[i].bucket_ms);
 }
 
+void cf_log_race_start(cf_config *cfg, size_t count, uint16_t port,
+                       unsigned bucket_ms)
+{
+    cf_vlog(cfg, "TCP race :%u — %zu address(es), bucket=%ums\n",
+            port, count, bucket_ms);
+}
+
+void cf_log_race_winner(cf_config *cfg, const char *addr, unsigned raw_ms)
+{
+    cf_vlog(cfg, "TCP race winner %s raw=%ums — reusing socket for request\n",
+            addr, raw_ms);
+}
+
+void cf_log_race_loser_rst(cf_config *cfg, const char *addr, unsigned raw_ms)
+{
+    if (raw_ms > 0)
+        cf_vlog(cfg, "TCP race loser %s raw=%ums — RST\n", addr, raw_ms);
+    else
+        cf_vlog(cfg, "TCP race loser %s — RST\n", addr);
+}
+
+void cf_log_race_ranking(cf_config *cfg, cf_ip_rank *ranks, size_t count)
+{
+    if (!cfg || !cfg->verbose || !ranks || count == 0)
+        return;
+    cf_vlog(cfg, "TCP race ranking (lowest latency first):\n");
+    for (size_t i = 0; i < count; i++)
+        cf_vlog(cfg, "  #%zu %s raw=%ums bucket=%ums\n",
+                i + 1, ranks[i].addr, ranks[i].raw_ms, ranks[i].bucket_ms);
+}
+
 static void cf_log_shell_quote(const char *s, FILE *out)
 {
     if (!s) {

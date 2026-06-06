@@ -303,22 +303,11 @@ static int cf_entry_populate(cf_ctx *ctx, cf_dns_entry *entry)
         return 0;
     }
 
-    cf_ip_rank *ranks = NULL;
-    size_t rank_count = 0;
-    if (cf_probe_rank(entry->host, entry->port, res.addrs, res.count,
-                      ctx->cfg->latency_bucket_ms, ctx->cfg->top_ips,
-                      &ranks, &rank_count, ctx->cfg) < 0) {
-        cf_dns_result_free(&res);
-        return -1;
-    }
-
-    if (cf_entry_set_ranks(entry, ranks, rank_count) < 0) {
-        free(ranks);
-        cf_dns_result_free(&res);
-        return -1;
-    }
-    entry->probed = 1;
-    free(ranks);
+    /* Defer ranking to first-request TCP race (zero extra RTT). */
+    entry->probed = 0;
+    entry->rank_count = 0;
+    cf_vlog(ctx->cfg, "multi-IP %s:%u — %zu address(es), TCP race on first request\n",
+            entry->host, entry->port, entry->all_count);
     cf_dns_result_free(&res);
     return 0;
 }
@@ -334,6 +323,29 @@ static void cf_snapshot_from_entry(cf_dns_entry *entry, cf_resolve_view *snap)
         strncpy(snap->single_ip, entry->all_addrs[0], sizeof(snap->single_ip) - 1);
     for (size_t i = 0; i < entry->rank_count && i < CF_RESOLVE_MAX_IPS; i++)
         strncpy(snap->ranks[i], entry->ranks[i].addr, sizeof(snap->ranks[i]) - 1);
+    for (size_t i = 0; i < entry->all_count && i < CF_RESOLVE_MAX_IPS; i++) {
+        if (entry->all_addrs[i])
+            strncpy(snap->all_addrs[i], entry->all_addrs[i],
+                    sizeof(snap->all_addrs[i]) - 1);
+    }
+}
+
+void cf_cache_commit_ranks(cf_ctx *ctx, const char *host, uint16_t port,
+                           cf_ip_rank *ranks, size_t count)
+{
+    if (!ctx || !host || !ranks || count == 0)
+        return;
+
+    cf_mutex_lock(ctx->cache_mutex);
+    cf_dns_entry *entry = cf_cache_bucket_find(ctx, host, port);
+    if (entry) {
+        if (cf_entry_set_ranks(entry, ranks, count) == 0) {
+            entry->probed = 1;
+            cf_vlog(ctx->cfg, "cache ranks committed for %s:%u (%zu IP(s))\n",
+                    host, port, count);
+        }
+    }
+    cf_mutex_unlock(ctx->cache_mutex);
 }
 
 static int cf_entry_reprobe(cf_ctx *ctx, cf_dns_entry *entry)

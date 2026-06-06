@@ -5,6 +5,7 @@ extern int test_util_run(void);
 extern int test_failover_run(void);
 extern int test_cache_run(void);
 extern int test_probe_run(void);
+extern int test_race_run(void);
 extern int test_dns_run(void);
 extern int test_ttl_run(void);
 
@@ -25,6 +26,7 @@ int main(void)
     test_util_run();
     test_failover_run();
     test_probe_run();
+    test_race_run();
     test_dns_run();
     test_cache_run();
     test_ttl_run();

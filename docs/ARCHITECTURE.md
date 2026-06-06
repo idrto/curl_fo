@@ -11,7 +11,7 @@
                          ▼
               ┌─────────────────────┐
               │   libcurl_fo.so     │
-              │  cache dns probe    │
+              │  cache dns probe race│
               │  http ws handle     │
               └──────────┬──────────┘
                          ▼
@@ -30,7 +30,8 @@ Phase 3: libcurl_fo_wrapper.so ──replaces──► -lcurl at link time
    - UDP DNS query for A + AAAA (reads TTL from RRs)
    - Fallback: `getaddrinfo` + `default_ttl_sec`
 3. **Single IP** → transparent (optional RESOLVE pin)
-4. **Multiple IPs** → TCP connect probe → bucket to 10ms → shuffle ties → top N
+4. **Multiple IPs (cold)** → parallel TCP handshake race on first request; winner socket reused for HTTP/TLS (no extra RTT); losers RST'd; latencies seed cache ranks in background
+5. **Multiple IPs (warm)** → cached rank order + `CURLOPT_RESOLVE` failover
 
 ### TTL refresh (no unnecessary probing)
 
@@ -43,7 +44,17 @@ TTL expired?
   └─ Update expires_at from new min TTL
 ```
 
-## Failover state machine (HTTP)
+## Cold-path TCP race (HTTP / WebSocket)
+
+```
+multi-IP, rank_count == 0:
+  cf_tcp_race(all_addrs) → winner_fd
+  cf_race_drain_async()   → background RST losers + cache ranks
+  CURLOPT_OPENSOCKET      → reuse winner (CONNECTTIMEOUT_MS = 0)
+  libcurl TLS/HTTP on existing TCP
+```
+
+## Failover state machine (HTTP, warm path)
 
 ```
 for ip in ranked_ips:

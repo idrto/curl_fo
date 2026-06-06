@@ -54,6 +54,7 @@ struct cf_config {
     unsigned default_ttl_sec;
     int      verbose;
     int      failover_gateway;  /* retry on HTTP 502/503/504 */
+    int      tcp_race;          /* parallel TCP race on cold multi-IP requests */
 };
 
 #define CF_RESOLVE_MAX_IPS 16
@@ -65,6 +66,7 @@ typedef struct cf_resolve_view {
     char     ranks[CF_RESOLVE_MAX_IPS][64];
     char     single_ip[64];
     size_t   all_count;
+    char     all_addrs[CF_RESOLVE_MAX_IPS][64];
 } cf_resolve_view;
 
 /* ── DNS resolution result ───────────────────────────────────────────── */
@@ -104,6 +106,22 @@ void          cf_cache_touch(cf_ctx *ctx, cf_dns_entry *entry);
 int cf_resolve_snapshot(cf_ctx *ctx, const char *host, uint16_t port,
                         cf_resolve_view *snap);
 void cf_dns_entry_unref(cf_ctx *ctx, cf_dns_entry *entry);
+void cf_cache_commit_ranks(cf_ctx *ctx, const char *host, uint16_t port,
+                           cf_ip_rank *ranks, size_t count);
+
+/* ── TCP connect race (cold path) ────────────────────────────────────── */
+
+typedef struct cf_race_result cf_race_result;
+
+int  cf_tcp_race(char **addrs, size_t count, uint16_t port,
+                  cf_config *cfg, cf_race_result **out_race);
+void cf_race_drain_async(cf_ctx *ctx, const char *host, uint16_t port,
+                         cf_race_result *race);
+void cf_race_sync_finish(cf_race_result *race);
+void cf_race_result_free(cf_race_result *race);
+int          cf_race_winner_fd(const cf_race_result *race);
+const char  *cf_race_winner_addr(const cf_race_result *race);
+size_t       cf_race_rank_count(const cf_race_result *race);
 
 /* ── Probe ───────────────────────────────────────────────────────────── */
 
@@ -144,6 +162,11 @@ void          cf_shadow_set_postfields(CURL *curl, const char *data);
 const char   *cf_shadow_get_postfields(CURL *curl);
 void          cf_shadow_set_proxy(CURL *curl, const char *proxy);
 const char   *cf_shadow_get_proxy(CURL *curl);
+void          cf_shadow_set_preconnected(CURL *curl, int fd, const char *ip);
+int           cf_shadow_take_preconnected(CURL *curl, char *ip, size_t iplen);
+int           cf_shadow_closesocket_cb(void *clientp, curl_socket_t item);
+curl_socket_t cf_shadow_opensocket_cb(void *clientp, curlsocktype purpose,
+                                      struct curl_sockaddr *address);
 
 /* Verbose logging (stderr, gated by cfg->verbose) */
 void cf_vlog(cf_config *cfg, const char *fmt, ...);
@@ -159,6 +182,11 @@ void cf_log_probe_start(cf_config *cfg, const char *host, uint16_t port,
 void cf_log_probe_ip(cf_config *cfg, const char *addr, int ok,
                      unsigned raw_ms, unsigned bucket_ms);
 void cf_log_probe_ranking(cf_config *cfg, cf_ip_rank *ranks, size_t count);
+void cf_log_race_start(cf_config *cfg, size_t count, uint16_t port,
+                       unsigned bucket_ms);
+void cf_log_race_winner(cf_config *cfg, const char *addr, unsigned raw_ms);
+void cf_log_race_loser_rst(cf_config *cfg, const char *addr, unsigned raw_ms);
+void cf_log_race_ranking(cf_config *cfg, cf_ip_rank *ranks, size_t count);
 void cf_log_curl_replay(cf_config *cfg, CURL *curl, const char *host,
                         uint16_t port, const char *ip, const char *req_id,
                         cf_method method, long timeout_ms, long connect_ms,
