@@ -10,7 +10,6 @@ Download from [GitHub Releases](https://github.com/idrto/curl_fo/releases/tag/v1
 |--------|----------------|
 | `x86_64-unknown-linux-gnu` | Linux desktop x64 |
 | `aarch64-unknown-linux-gnu` | Linux desktop arm64 |
-| `x86_64-apple-darwin` | macOS desktop x64 |
 | `aarch64-apple-darwin` | macOS desktop arm64 |
 | `x86_64-pc-windows-msvc` | Windows desktop x64 |
 | `aarch64-pc-windows-msvc` | Windows desktop arm64 |

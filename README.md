@@ -23,7 +23,7 @@
 
 ## Prebuilt binaries (v1.0.0)
 
-Official builds for **12 Flutter/desktop triples** are published on every push to `main` as [GitHub Actions artifacts](https://github.com/idrto/curl_fo/actions/workflows/binaries.yml), and on version tags as [GitHub Releases](https://github.com/idrto/curl_fo/releases).
+Official builds for **11 Flutter/desktop triples** are published on every push to `main` as [GitHub Actions artifacts](https://github.com/idrto/curl_fo/actions/workflows/binaries.yml), and on version tags as [GitHub Releases](https://github.com/idrto/curl_fo/releases).
 
 ### Download v1.0.0
 
@@ -41,8 +41,7 @@ Replace `<triple>` with your target, e.g. `aarch64-apple-darwin`, `x86_64-pc-win
 |--------|----------|
 | `x86_64-unknown-linux-gnu` | Linux x64 |
 | `aarch64-unknown-linux-gnu` | Linux arm64 |
-| `x86_64-apple-darwin` | macOS x64 |
-| `aarch64-apple-darwin` | macOS arm64 |
+| `aarch64-apple-darwin` | macOS arm64 (use on Intel Macs via Rosetta) |
 | `x86_64-pc-windows-msvc` | Windows x64 |
 | `aarch64-pc-windows-msvc` | Windows arm64 |
 | `aarch64-linux-android` | Android arm64-v8a |

@@ -12,7 +12,6 @@
 |--------|---------|
 | Linux x64 | [curl_fo-1.0.0-x86_64-unknown-linux-gnu.tar.gz](https://github.com/idrto/curl_fo/releases/download/v1.0.0/curl_fo-1.0.0-x86_64-unknown-linux-gnu.tar.gz) |
 | Linux arm64 | [curl_fo-1.0.0-aarch64-unknown-linux-gnu.tar.gz](https://github.com/idrto/curl_fo/releases/download/v1.0.0/curl_fo-1.0.0-aarch64-unknown-linux-gnu.tar.gz) |
-| macOS x64 | [curl_fo-1.0.0-x86_64-apple-darwin.tar.gz](https://github.com/idrto/curl_fo/releases/download/v1.0.0/curl_fo-1.0.0-x86_64-apple-darwin.tar.gz) |
 | macOS arm64 | [curl_fo-1.0.0-aarch64-apple-darwin.tar.gz](https://github.com/idrto/curl_fo/releases/download/v1.0.0/curl_fo-1.0.0-aarch64-apple-darwin.tar.gz) |
 | Windows x64 | [curl_fo-1.0.0-x86_64-pc-windows-msvc.zip](https://github.com/idrto/curl_fo/releases/download/v1.0.0/curl_fo-1.0.0-x86_64-pc-windows-msvc.zip) |
 | Windows arm64 | [curl_fo-1.0.0-aarch64-pc-windows-msvc.zip](https://github.com/idrto/curl_fo/releases/download/v1.0.0/curl_fo-1.0.0-aarch64-pc-windows-msvc.zip) |
@@ -42,6 +41,10 @@ curl_fo-<version>-<triple>/
   triple.txt
   README-BINARY.txt
 ```
+
+## macOS note
+
+Intel macOS (`x86_64-apple-darwin`) is not published. Use the **aarch64-apple-darwin** build on Apple Silicon Macs, or on Intel Macs under Rosetta 2.
 
 ## Runtime notes
 

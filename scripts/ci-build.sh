@@ -106,9 +106,6 @@ case "$TRIPLE" in
     x86_64-unknown-linux-gnu|aarch64-unknown-linux-gnu)
         build_native
         ;;
-    x86_64-apple-darwin)
-        build_vcpkg x64-osx
-        ;;
     aarch64-apple-darwin)
         PREFIX="$(macos_curl_prefix)"
         build_native \

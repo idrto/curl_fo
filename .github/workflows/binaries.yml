@@ -27,9 +27,6 @@ jobs:
           - triple: aarch64-unknown-linux-gnu
             runner: ubuntu-24.04-arm
             setup: linux-gnu
-          - triple: x86_64-apple-darwin
-            runner: macos-latest
-            setup: macos-x64-vcpkg
           - triple: aarch64-apple-darwin
             runner: macos-latest
             setup: macos-arm64
@@ -69,12 +66,8 @@ jobs:
         if: matrix.setup == 'macos-arm64'
         run: brew install curl cmake ninja
 
-      - name: Install macOS build tools
-        if: matrix.setup == 'macos-x64-vcpkg'
-        run: brew install cmake ninja
-
       - name: Setup vcpkg
-        if: matrix.setup == 'windows-msvc' || matrix.setup == 'vcpkg-mobile' || matrix.setup == 'macos-x64-vcpkg'
+        if: matrix.setup == 'windows-msvc' || matrix.setup == 'vcpkg-mobile'
         uses: lukka/run-vcpkg@v11
         with:
           vcpkgGitCommitId: ${{ env.VCPKG_COMMIT }}
@@ -111,7 +104,7 @@ jobs:
           chmod +x scripts/*.sh
           mkdir -p dist
           rm -f dist/checksums.txt
-          if [ "${{ matrix.setup }}" = "windows-msvc" ] || [ "${{ matrix.setup }}" = "vcpkg-mobile" ] || [ "${{ matrix.setup }}" = "macos-x64-vcpkg" ]; then
+          if [ "${{ matrix.setup }}" = "windows-msvc" ] || [ "${{ matrix.setup }}" = "vcpkg-mobile" ]; then
             export VCPKG_ROOT="${{ github.workspace }}/vcpkg"
           fi
           bash scripts/ci-build.sh "${{ matrix.triple }}"
