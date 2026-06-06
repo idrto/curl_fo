@@ -12,6 +12,7 @@
 #  pragma comment(lib, "ws2_32.lib")
 #else
 #  include <arpa/inet.h>
+#  include <errno.h>
 #  include <fcntl.h>
 #  include <netdb.h>
 #  include <netinet/in.h>
@@ -72,7 +73,6 @@ static int cf_tcp_connect_latency(const char *addr, uint16_t port,
         return -1;
     }
 #else
-#  include <errno.h>
     if (rc < 0 && errno != EINPROGRESS) {
         close(sock);
         freeaddrinfo(res);
@@ -80,10 +80,19 @@ static int cf_tcp_connect_latency(const char *addr, uint16_t port,
     }
 #endif
 
+    int prc;
+#ifdef _WIN32
+    WSAPOLLFD pfd;
+    pfd.fd = (SOCKET)sock;
+    pfd.events = POLLOUT;
+    pfd.revents = 0;
+    prc = WSAPoll(&pfd, 1, 3000);
+#else
     struct pollfd pfd;
     pfd.fd = sock;
     pfd.events = POLLOUT;
-    int prc = poll(&pfd, 1, 3000);
+    prc = poll(&pfd, 1, 3000);
+#endif
     uint64_t elapsed = cf_now_ms() - start;
 
 #ifdef _WIN32

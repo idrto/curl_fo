@@ -43,6 +43,8 @@ set(CURL_FO_CORE_SOURCES
     src/http.c
     src/ws.c
     src/handle.c
+    src/curl_dispatch.c
+    src/shim_ctx.c
 )
 
 add_library(curl_fo SHARED ${CURL_FO_CORE_SOURCES})
@@ -72,10 +74,13 @@ if(WIN32)
 endif()
 
 if(CURL_FO_BUILD_SHIM)
-    add_library(curl_fo_shim SHARED src/shim.c)
+    add_library(curl_fo_shim SHARED src/shim.c ${CURL_FO_CORE_SOURCES})
     target_include_directories(curl_fo_shim PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
-    target_compile_definitions(curl_fo_shim PRIVATE CURL_FO_BUILDING)
-    target_link_libraries(curl_fo_shim PRIVATE curl_fo_static CURL::libcurl)
+    target_compile_definitions(curl_fo_shim PRIVATE CURL_FO_BUILDING CURL_FO_SHIM_BUILD)
+    target_link_libraries(curl_fo_shim PRIVATE)
+    if(WIN32)
+        target_link_libraries(curl_fo_shim PRIVATE ws2_32 iphlpapi)
+    endif()
     set_target_properties(curl_fo_shim PROPERTIES OUTPUT_NAME curl_fo_shim)
     if(NOT WIN32)
         set_target_properties(curl_fo_shim PROPERTIES
@@ -84,10 +89,13 @@ if(CURL_FO_BUILD_SHIM)
 endif()
 
 if(CURL_FO_BUILD_WRAPPER)
-    add_library(curl_fo_wrapper SHARED src/wrapper.c)
+    add_library(curl_fo_wrapper SHARED src/wrapper.c ${CURL_FO_CORE_SOURCES})
     target_include_directories(curl_fo_wrapper PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
-    target_compile_definitions(curl_fo_wrapper PRIVATE CURL_FO_BUILDING)
-    target_link_libraries(curl_fo_wrapper PRIVATE curl_fo_static)
+    target_compile_definitions(curl_fo_wrapper PRIVATE CURL_FO_BUILDING CURL_FO_WRAPPER_BUILD)
+    target_link_libraries(curl_fo_wrapper PRIVATE)
+    if(WIN32)
+        target_link_libraries(curl_fo_wrapper PRIVATE ws2_32 iphlpapi)
+    endif()
     set_target_properties(curl_fo_wrapper PROPERTIES OUTPUT_NAME curl_fo_wrapper)
     if(NOT WIN32)
         set_target_properties(curl_fo_wrapper PROPERTIES

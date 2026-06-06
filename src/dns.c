@@ -124,6 +124,7 @@ static int cf_get_system_dns(char *server, size_t serverlen)
     fclose(f);
     strncpy(server, "8.8.8.8", serverlen - 1);
     return 0;
+#endif
 }
 
 static int cf_dns_query_type(const char *host, uint16_t qtype,

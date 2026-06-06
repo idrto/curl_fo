@@ -6,6 +6,12 @@
  */
 #include "internal.h"
 
+#undef curl_easy_init
+#undef curl_easy_cleanup
+#undef curl_easy_setopt
+#undef curl_easy_perform
+#undef curl_easy_getinfo
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -126,7 +132,7 @@ CF_EXPORT CURLcode curl_easy_perform(CURL *curl)
 
 CF_FORWARD(CURLcode, curl_global_init, (long flags), (flags))
 CF_FORWARD_VOID(curl_global_cleanup, (void), ())
-CF_FORWARD(const char *, curl_version, (void), ())
+CF_FORWARD(char *, curl_version, (void), ())
 CF_EXPORT CURLcode curl_easy_getinfo(CURL *curl, CURLINFO info, ...)
 {
     va_list ap;
@@ -140,7 +146,7 @@ CF_EXPORT CURLcode curl_easy_getinfo(CURL *curl, CURLINFO info, ...)
     return real ? real(curl, info, param) : CURLE_BAD_FUNCTION_ARGUMENT;
 }
 CF_FORWARD(CURLcode, curl_easy_pause, (CURL *c, int bits), (c, bits))
-CF_FORWARD(CURLcode, curl_easy_reset, (CURL *c), (c))
+CF_FORWARD_VOID(curl_easy_reset, (CURL *c), (c))
 CF_FORWARD(CURL *, curl_easy_duphandle, (CURL *c), (c))
 CF_FORWARD(CURLM *, curl_multi_init, (void), ())
 CF_FORWARD(CURLMcode, curl_multi_add_handle, (CURLM *m, CURL *c), (m, c))
@@ -149,13 +155,13 @@ CF_FORWARD(CURLMcode, curl_multi_poll, (CURLM *m, struct curl_waitfd *e, unsigne
 CF_FORWARD(CURLMcode, curl_multi_perform, (CURLM *m, int *rc), (m, rc))
 CF_FORWARD(CURLMcode, curl_multi_wait, (CURLM *m, struct curl_waitfd *e, unsigned n, int t, int *rc), (m, e, n, t, rc))
 CF_FORWARD(int, curl_multi_fdset, (CURLM *m, fd_set *r, fd_set *w, fd_set *e, int *max), (m, r, w, e, max))
-CF_FORWARD_VOID(curl_multi_cleanup, (CURLM *m), (m))
+CF_FORWARD(CURLMcode, curl_multi_cleanup, (CURLM *m), (m))
 CF_FORWARD(struct curl_slist *, curl_slist_append, (struct curl_slist *l, const char *s), (l, s))
 CF_FORWARD_VOID(curl_slist_free_all, (struct curl_slist *l), (l))
 CF_FORWARD(const char *, curl_easy_strerror, (CURLcode c), (c))
 CF_FORWARD(curl_version_info_data *, curl_version_info, (CURLversion v), (v))
 CF_FORWARD(CURLSH *, curl_share_init, (void), ())
-CF_FORWARD_VOID(curl_share_cleanup, (CURLSH *s), (s))
+CF_FORWARD(CURLSHcode, curl_share_cleanup, (CURLSH *s), (s))
 CF_FORWARD(CURLcode, curl_easy_recv, (CURL *c, void *b, size_t l, size_t *n), (c, b, l, n))
 CF_FORWARD(CURLcode, curl_easy_send, (CURL *c, const void *b, size_t l, size_t *n), (c, b, l, n))
 CF_FORWARD(CURLcode, curl_ws_recv, (CURL *c, void *b, size_t l, size_t *n, const struct curl_ws_frame **f), (c, b, l, n, f))

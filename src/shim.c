@@ -3,6 +3,13 @@
  */
 #include "internal.h"
 
+/* libcurl headers may macro-wrap these; we export real functions */
+#undef curl_easy_init
+#undef curl_easy_cleanup
+#undef curl_easy_setopt
+#undef curl_easy_perform
+#undef curl_easy_getinfo
+
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,9 +19,6 @@
 #else
 #  include <dlfcn.h>
 #endif
-
-static cf_ctx *g_shim_ctx;
-static void   *g_shim_mutex;
 
 static void *cf_load_real(const char *sym)
 {
@@ -34,20 +38,6 @@ static void *cf_load_real(const char *sym)
     }
     return h ? dlsym(h, sym) : NULL;
 #endif
-}
-
-cf_ctx *cf_shim_ctx(void)
-{
-    if (!g_shim_mutex)
-        g_shim_mutex = cf_mutex_create();
-    cf_mutex_lock(g_shim_mutex);
-    if (!g_shim_ctx) {
-        cf_config *cfg = cf_config_create();
-        cf_config_load_env(cfg);
-        g_shim_ctx = cf_ctx_create(cfg);
-    }
-    cf_mutex_unlock(g_shim_mutex);
-    return g_shim_ctx;
 }
 
 /* ── Intercepted libcurl easy API ─────────────────────────────────────── */

@@ -195,7 +195,7 @@ int cf_should_failover(CURLcode code, long http_code)
 cf_method cf_detect_method(CURL *curl)
 {
     const char *method = "GET";
-    if (curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_METHOD, &method) != CURLE_OK
+    if (cf_curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_METHOD, &method) != CURLE_OK
         || !method)
         return CF_METHOD_UNKNOWN;
 #ifdef _WIN32

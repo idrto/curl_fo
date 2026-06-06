@@ -118,4 +118,18 @@ void          cf_easy_attach(CURL *curl);
 void          cf_shadow_set_headers(CURL *curl, struct curl_slist *headers);
 struct curl_slist *cf_shadow_get_headers(CURL *curl);
 
+/* libcurl dispatch — uses dlsym when CURL_FO_SHIM_BUILD is set */
+CURLcode cf_curl_easy_perform(CURL *curl);
+CURLcode cf_curl_easy_setopt(CURL *curl, CURLoption opt, ...);
+CURLcode cf_curl_easy_getinfo(CURL *curl, CURLINFO info, void *param);
+CURL    *cf_curl_easy_init(void);
+void     cf_curl_easy_cleanup(CURL *curl);
+struct curl_slist *cf_curl_slist_append(struct curl_slist *list, const char *s);
+void cf_curl_slist_free_all(struct curl_slist *list);
+CURLcode cf_curl_ws_send(CURL *curl, const void *buf, size_t len, size_t *sent,
+                         curl_off_t fragsize, unsigned flags);
+CURLcode cf_curl_ws_recv(CURL *curl, void *buf, size_t len, size_t *recvd,
+                         const struct curl_ws_frame **meta);
+curl_version_info_data *cf_curl_version_info(CURLversion ver);
+
 #endif /* CURL_FO_INTERNAL_H */

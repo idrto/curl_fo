@@ -17,7 +17,7 @@ struct cf_ws {
 
 static int cf_ws_has_websockets(void)
 {
-    curl_version_info_data *vi = curl_version_info(CURLVERSION_NOW);
+    curl_version_info_data *vi = cf_curl_version_info(CURLVERSION_NOW);
     return vi && vi->version_num >= 0x075600;
 }
 
@@ -30,18 +30,18 @@ static CURLcode cf_ws_try_connect(cf_ws *ws, size_t ip_index)
     snprintf(entry, sizeof(entry), "%s:%u:%s",
              ws->host, ws->port, ws->entry->ranks[ip_index].addr);
 
-    struct curl_slist *resolve = curl_slist_append(NULL, entry);
-    curl_easy_setopt(ws->curl, CURLOPT_RESOLVE, resolve);
-    curl_easy_setopt(ws->curl, CURLOPT_URL, ws->url);
-    curl_easy_setopt(ws->curl, CURLOPT_CONNECT_ONLY, 2L);
-    curl_easy_setopt(ws->curl, CURLOPT_TIMEOUT_MS,
+    struct curl_slist *resolve = cf_curl_slist_append(NULL, entry);
+    cf_curl_easy_setopt(ws->curl, CURLOPT_RESOLVE, resolve);
+    cf_curl_easy_setopt(ws->curl, CURLOPT_URL, ws->url);
+    cf_curl_easy_setopt(ws->curl, CURLOPT_CONNECT_ONLY, 2L);
+    cf_curl_easy_setopt(ws->curl, CURLOPT_TIMEOUT_MS,
                      (long)cf_config_get_other_timeout_ms(ws->ctx->cfg));
-    curl_easy_setopt(ws->curl, CURLOPT_CONNECTTIMEOUT_MS,
+    cf_curl_easy_setopt(ws->curl, CURLOPT_CONNECTTIMEOUT_MS,
                      (long)cf_config_get_connect_timeout_ms(ws->ctx->cfg));
 
-    CURLcode rc = curl_easy_perform(ws->curl);
-    curl_easy_setopt(ws->curl, CURLOPT_RESOLVE, NULL);
-    curl_slist_free_all(resolve);
+    CURLcode rc = cf_curl_easy_perform(ws->curl);
+    cf_curl_easy_setopt(ws->curl, CURLOPT_RESOLVE, NULL);
+    cf_curl_slist_free_all(resolve);
     return rc;
 }
 
@@ -67,7 +67,7 @@ cf_ws *cf_ws_connect(cf_ctx *ctx, const char *url)
 
     ws->ctx = ctx;
     ws->entry = entry;
-    ws->curl = curl_easy_init();
+    ws->curl = cf_curl_easy_init();
     if (!ws->curl) {
         free(ws);
         return NULL;
@@ -83,13 +83,13 @@ cf_ws *cf_ws_connect(cf_ctx *ctx, const char *url)
         char resolve_entry[320];
         snprintf(resolve_entry, sizeof(resolve_entry), "%s:%u:%s",
                  host, port, entry->all_addrs[0]);
-        struct curl_slist *sl = curl_slist_append(NULL, resolve_entry);
-        curl_easy_setopt(ws->curl, CURLOPT_RESOLVE, sl);
-        curl_easy_setopt(ws->curl, CURLOPT_URL, url);
-        curl_easy_setopt(ws->curl, CURLOPT_CONNECT_ONLY, 2L);
-        CURLcode rc = curl_easy_perform(ws->curl);
-        curl_easy_setopt(ws->curl, CURLOPT_RESOLVE, NULL);
-        curl_slist_free_all(sl);
+        struct curl_slist *sl = cf_curl_slist_append(NULL, resolve_entry);
+        cf_curl_easy_setopt(ws->curl, CURLOPT_RESOLVE, sl);
+        cf_curl_easy_setopt(ws->curl, CURLOPT_URL, url);
+        cf_curl_easy_setopt(ws->curl, CURLOPT_CONNECT_ONLY, 2L);
+        CURLcode rc = cf_curl_easy_perform(ws->curl);
+        cf_curl_easy_setopt(ws->curl, CURLOPT_RESOLVE, NULL);
+        cf_curl_slist_free_all(sl);
         if (rc != CURLE_OK) {
             cf_ws_close(ws);
             return NULL;
@@ -139,13 +139,13 @@ cf_ws_result cf_ws_send(cf_ws *ws, const void *data, size_t len,
 {
     if (!ws || !ws->connected)
         return CF_WS_ERR;
-    CURLcode rc = curl_ws_send(ws->curl, data, len, sent, 0, flags);
+    CURLcode rc = cf_curl_ws_send(ws->curl, data, len, sent, 0, flags);
     if (rc == CURLE_OK)
         return CF_WS_OK;
     if (rc == CURLE_AGAIN)
         return CF_WS_ERR;
     if (cf_ws_reconnect(ws) == CURLE_OK) {
-        rc = curl_ws_send(ws->curl, data, len, sent, 0, flags);
+        rc = cf_curl_ws_send(ws->curl, data, len, sent, 0, flags);
         return rc == CURLE_OK ? CF_WS_OK : CF_WS_ERR;
     }
     ws->connected = 0;
@@ -157,7 +157,7 @@ cf_ws_result cf_ws_recv(cf_ws *ws, void *buf, size_t buflen,
 {
     if (!ws || !ws->connected)
         return CF_WS_ERR;
-    CURLcode rc = curl_ws_recv(ws->curl, buf, buflen, received, meta);
+    CURLcode rc = cf_curl_ws_recv(ws->curl, buf, buflen, received, meta);
     if (rc == CURLE_OK)
         return CF_WS_OK;
     if (rc == CURLE_AGAIN)
@@ -172,7 +172,7 @@ void cf_ws_close(cf_ws *ws)
 {
     if (!ws) return;
     if (ws->curl)
-        curl_easy_cleanup(ws->curl);
+        cf_curl_easy_cleanup(ws->curl);
     free(ws);
 }
 

@@ -224,7 +224,14 @@ static int cf_entry_refresh_ttl(cf_ctx *ctx, cf_dns_entry *entry)
             new_ranks[nr++] = entry->ranks[i];
     }
     for (size_t i = 0; i < res.count; i++) {
-        if (!cf_addr_in_list(res.addrs[i], new_ranks, nr)) {
+        int already_ranked = 0;
+        for (size_t k = 0; k < nr; k++) {
+            if (strcmp(new_ranks[k].addr, res.addrs[i]) == 0) {
+                already_ranked = 1;
+                break;
+            }
+        }
+        if (!already_ranked) {
             strncpy(new_ranks[nr].addr, res.addrs[i], sizeof(new_ranks[nr].addr) - 1);
             new_ranks[nr].bucket_ms = UINT32_MAX;
             new_ranks[nr].raw_ms = UINT32_MAX;
