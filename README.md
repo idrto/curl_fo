@@ -21,18 +21,18 @@
 | **Flutter FFI** | Dart bindings in `ffi/` |
 | **Three integration modes** | Explicit API · LD_PRELOAD shim · libcurl wrapper |
 
-## Prebuilt binaries (v1.0.0)
+## Prebuilt binaries (v1.0.1)
 
 Official builds for **11 Flutter/desktop triples** are published on every push to `main` as [GitHub Actions artifacts](https://github.com/idrto/curl_fo/actions/workflows/binaries.yml), and on version tags as [GitHub Releases](https://github.com/idrto/curl_fo/releases).
 
-### Download v1.0.0
+### Download v1.0.1
 
 ```text
 # Linux / macOS / Android / iOS
-https://github.com/idrto/curl_fo/releases/download/v1.0.0/curl_fo-1.0.0-<triple>.tar.gz
+https://github.com/idrto/curl_fo/releases/download/v1.0.1/curl_fo-1.0.1-<triple>.tar.gz
 
 # Windows
-https://github.com/idrto/curl_fo/releases/download/v1.0.0/curl_fo-1.0.0-<triple>.zip
+https://github.com/idrto/curl_fo/releases/download/v1.0.1/curl_fo-1.0.1-<triple>.zip
 ```
 
 Replace `<triple>` with your target, e.g. `aarch64-apple-darwin`, `x86_64-pc-windows-msvc`, `aarch64-linux-android`.

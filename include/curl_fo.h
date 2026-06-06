@@ -34,8 +34,8 @@ extern "C" {
 
 #define CURL_FO_VERSION_MAJOR 1
 #define CURL_FO_VERSION_MINOR 0
-#define CURL_FO_VERSION_PATCH 0
-#define CURL_FO_VERSION_STRING "1.0.0"
+#define CURL_FO_VERSION_PATCH 1
+#define CURL_FO_VERSION_STRING "1.0.1"
 
 /* ── Error codes (library-specific, beyond CURLcode) ─────────────────── */
 

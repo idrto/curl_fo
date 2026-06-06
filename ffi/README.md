@@ -1,8 +1,8 @@
 # curl_fo Flutter FFI
 
-## Prebuilt binaries (v1.0.0)
+## Prebuilt binaries (v1.0.1)
 
-Download from [GitHub Releases](https://github.com/idrto/curl_fo/releases/tag/v1.0.0) or latest [workflow artifacts](https://github.com/idrto/curl_fo/actions/workflows/binaries.yml).
+Download from [GitHub Releases](https://github.com/idrto/curl_fo/releases/tag/v1.0.1) or latest [workflow artifacts](https://github.com/idrto/curl_fo/actions/workflows/binaries.yml).
 
 ### Triple → Flutter platform
 
@@ -23,8 +23,8 @@ Download from [GitHub Releases](https://github.com/idrto/curl_fo/releases/tag/v1
 ### Download URL pattern
 
 ```
-https://github.com/idrto/curl_fo/releases/download/v1.0.0/curl_fo-1.0.0-<triple>.tar.gz
-https://github.com/idrto/curl_fo/releases/download/v1.0.0/curl_fo-1.0.0-<triple>.zip   # Windows
+https://github.com/idrto/curl_fo/releases/download/v1.0.1/curl_fo-1.0.1-<triple>.tar.gz
+https://github.com/idrto/curl_fo/releases/download/v1.0.1/curl_fo-1.0.1-<triple>.zip   # Windows
 ```
 
 Verify with `checksums.txt` from the release.
