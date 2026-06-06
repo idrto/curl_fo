@@ -22,7 +22,8 @@ build_cmake() {
 vcpkg_build() {
     local triplet="$1"
     shift
-    "$VCPKG_ROOT/vcpkg" install "curl:${triplet}"
+    local overlay="$ROOT/triplets"
+    "$VCPKG_ROOT/vcpkg" install "curl:${triplet}" --overlay-triplets="$overlay"
     build_cmake "${CMAKE_COMMON[@]}" \
         -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
         -DVCPKG_TARGET_TRIPLET="${triplet}" \

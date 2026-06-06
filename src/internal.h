@@ -1,6 +1,10 @@
 #ifndef CURL_FO_INTERNAL_H
 #define CURL_FO_INTERNAL_H
 
+#if !defined(_WIN32) && !defined(_DEFAULT_SOURCE)
+#define _DEFAULT_SOURCE
+#endif
+
 #include "curl_fo.h"
 
 #include <stdbool.h>
