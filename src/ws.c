@@ -26,7 +26,7 @@ static CURLcode cf_ws_try_connect(cf_ws *ws, size_t ip_index)
     if (!ws->entry || ip_index >= ws->entry->rank_count)
         return CURLE_COULDNT_CONNECT;
 
-    char entry[320];
+    char entry[384];
     snprintf(entry, sizeof(entry), "%s:%u:%s",
              ws->host, ws->port, ws->entry->ranks[ip_index].addr);
 

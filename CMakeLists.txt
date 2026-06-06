@@ -20,9 +20,25 @@ if(CURL_FO_MOBILE_BUILD)
     set(CURL_FO_BUILD_EXAMPLE OFF CACHE BOOL "" FORCE)
 endif()
 
-# libcurl: vcpkg CONFIG when cross-compiling; system package on native desktop.
+# libcurl discovery: vcpkg (Windows), CURL_ROOT (mobile), system package (native desktop).
 if(CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg")
     find_package(CURL CONFIG REQUIRED)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Android" OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    find_path(CURL_INCLUDE_DIR NAMES curl/curl.h
+        HINTS "${CURL_ROOT}/include" "$ENV{CURL_ROOT}/include")
+    find_library(CURL_LIBRARY NAMES curl libcurl libcurl.a
+        HINTS "${CURL_ROOT}/lib" "$ENV{CURL_ROOT}/lib")
+    if(CURL_INCLUDE_DIR AND CURL_LIBRARY)
+        add_library(CURL::libcurl UNKNOWN IMPORTED)
+        set_target_properties(CURL::libcurl PROPERTIES
+            IMPORTED_LOCATION "${CURL_LIBRARY}"
+            INTERFACE_INCLUDE_DIRECTORIES "${CURL_INCLUDE_DIR}")
+        set(CURL_FOUND TRUE)
+    endif()
+    if(NOT CURL_FOUND)
+        message(FATAL_ERROR
+            "libcurl not found for ${CMAKE_SYSTEM_NAME}. Pass -DCURL_ROOT=<vcpkg installed triplet>.")
+    endif()
 else()
     find_package(CURL QUIET)
     if(NOT CURL_FOUND)
@@ -46,6 +62,15 @@ else()
             "-DCURL_ROOT=<path> with include/ and lib/ subdirs.")
     endif()
 endif()
+
+function(cf_add_curl_headers target)
+    if(TARGET CURL::libcurl)
+        get_target_property(_curl_inc CURL::libcurl INTERFACE_INCLUDE_DIRECTORIES)
+        if(_curl_inc)
+            target_include_directories(${target} PRIVATE ${_curl_inc})
+        endif()
+    endif()
+endfunction()
 
 set(CURL_FO_CORE_SOURCES
     src/config.c
@@ -91,6 +116,7 @@ endif()
 if(CURL_FO_BUILD_SHIM)
     add_library(curl_fo_shim SHARED src/shim.c ${CURL_FO_CORE_SOURCES})
     target_include_directories(curl_fo_shim PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    cf_add_curl_headers(curl_fo_shim)
     target_compile_definitions(curl_fo_shim PRIVATE CURL_FO_BUILDING CURL_FO_SHIM_BUILD)
     target_link_libraries(curl_fo_shim PRIVATE)
     if(WIN32)
@@ -106,6 +132,7 @@ endif()
 if(CURL_FO_BUILD_WRAPPER)
     add_library(curl_fo_wrapper SHARED src/wrapper.c ${CURL_FO_CORE_SOURCES})
     target_include_directories(curl_fo_wrapper PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    cf_add_curl_headers(curl_fo_wrapper)
     target_compile_definitions(curl_fo_wrapper PRIVATE CURL_FO_BUILDING CURL_FO_WRAPPER_BUILD)
     target_link_libraries(curl_fo_wrapper PRIVATE)
     if(WIN32)

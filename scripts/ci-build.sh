@@ -22,7 +22,12 @@ vcpkg_root() {
     fi
 }
 
-CMAKE_NATIVE=(
+vcpkg_install() {
+    local triplet="$1"
+    "$VCPKG_ROOT/vcpkg" install "curl:${triplet}" --overlay-triplets="$OVERLAY"
+}
+
+CMAKE_RELEASE=(
     -G Ninja
     -DCMAKE_BUILD_TYPE=Release
     -DCURL_FO_BUILD_TESTS=OFF
@@ -31,7 +36,7 @@ CMAKE_NATIVE=(
 
 build_native() {
     rm -rf "$BUILD"
-    cmake -S "$ROOT" -B "$BUILD" "${CMAKE_NATIVE[@]}" "$@"
+    cmake -S "$ROOT" -B "$BUILD" "${CMAKE_RELEASE[@]}" "$@"
     cmake --build "$BUILD" --parallel
 }
 
@@ -40,15 +45,51 @@ build_vcpkg() {
     shift
     VCPKG_ROOT="$(vcpkg_root)"
     export VCPKG_ROOT
-    [ -f "$TOOLCHAIN" ] || { echo "Missing toolchain: $TOOLCHAIN"; exit 1; }
+    vcpkg_install "$triplet"
     rm -rf "$BUILD"
-    cmake -S "$ROOT" -B "$BUILD" -G Ninja \
+    cmake -S "$ROOT" -B "$BUILD" "${CMAKE_RELEASE[@]}" \
         -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN" \
         -DVCPKG_TARGET_TRIPLET="$triplet" \
-        -DVCPKG_OVERLAY_TRIPLETS="$OVERLAY" \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DCURL_FO_BUILD_TESTS=OFF \
-        -DCURL_FO_BUILD_EXAMPLE=OFF \
+        "$@"
+    cmake --build "$BUILD" --parallel
+}
+
+build_android() {
+    local triplet="$1"
+    local abi="$2"
+    shift 2
+    VCPKG_ROOT="$(vcpkg_root)"
+    export VCPKG_ROOT
+    vcpkg_install "$triplet"
+    local prefix="$VCPKG_ROOT/installed/${triplet}"
+    local ndk="${ANDROID_NDK_HOME:?ANDROID_NDK_HOME is required}"
+    rm -rf "$BUILD"
+    cmake -S "$ROOT" -B "$BUILD" "${CMAKE_RELEASE[@]}" \
+        -DCMAKE_TOOLCHAIN_FILE="$ndk/build/cmake/android.toolchain.cmake" \
+        -DANDROID_ABI="$abi" \
+        -DANDROID_PLATFORM=android-24 \
+        -DCURL_ROOT="$prefix" \
+        -DCURL_FO_MOBILE_BUILD=ON \
+        "$@"
+    cmake --build "$BUILD" --parallel
+}
+
+build_ios() {
+    local triplet="$1"
+    local arch="$2"
+    local sysroot="$3"
+    shift 3
+    VCPKG_ROOT="$(vcpkg_root)"
+    export VCPKG_ROOT
+    vcpkg_install "$triplet"
+    local prefix="$VCPKG_ROOT/installed/${triplet}"
+    rm -rf "$BUILD"
+    cmake -S "$ROOT" -B "$BUILD" "${CMAKE_RELEASE[@]}" \
+        -DCMAKE_SYSTEM_NAME=iOS \
+        -DCMAKE_OSX_ARCHITECTURES="$arch" \
+        -DCMAKE_OSX_SYSROOT="$sysroot" \
+        -DCURL_ROOT="$prefix" \
+        -DCURL_FO_MOBILE_BUILD=ON \
         "$@"
     cmake --build "$BUILD" --parallel
 }
@@ -86,22 +127,22 @@ case "$TRIPLE" in
         build_vcpkg arm64-windows
         ;;
     aarch64-linux-android)
-        build_vcpkg arm64-android -DCURL_FO_MOBILE_BUILD=ON
+        build_android arm64-android arm64-v8a
         ;;
     armv7-linux-androideabi)
-        build_vcpkg arm-neon-android -DCURL_FO_MOBILE_BUILD=ON
+        build_android arm-android armeabi-v7a
         ;;
     x86_64-linux-android)
-        build_vcpkg x64-android -DCURL_FO_MOBILE_BUILD=ON
+        build_android x64-android x86_64
         ;;
     aarch64-apple-ios)
-        build_vcpkg arm64-ios -DCURL_FO_MOBILE_BUILD=ON
+        build_ios arm64-ios arm64 iphoneos
         ;;
     aarch64-apple-ios-sim)
-        build_vcpkg arm64-ios-simulator -DCURL_FO_MOBILE_BUILD=ON
+        build_ios arm64-ios-simulator arm64 iphonesimulator
         ;;
     x86_64-apple-ios-sim)
-        build_vcpkg x64-ios-simulator -DCURL_FO_MOBILE_BUILD=ON
+        build_ios x64-ios-simulator x86_64 iphonesimulator
         ;;
     *)
         echo "Unknown triple: $TRIPLE"; exit 1 ;;
