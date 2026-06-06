@@ -113,7 +113,7 @@ CURLcode cf_easy_perform(cf_ctx *ctx, CURL *curl)
         return cf_curl_easy_perform(curl);
     }
 
-    cf_resolve_snapshot snap;
+    cf_resolve_view snap;
     if (cf_resolve_snapshot(ctx, host, port, &snap) < 0 || !snap.ok)
         return CURLE_COULDNT_RESOLVE_HOST;
 

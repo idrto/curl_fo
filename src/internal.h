@@ -58,14 +58,14 @@ struct cf_config {
 
 #define CF_RESOLVE_MAX_IPS 16
 
-typedef struct cf_resolve_snapshot {
+typedef struct cf_resolve_view {
     int      ok;
     int      multi_ip;
     size_t   rank_count;
     char     ranks[CF_RESOLVE_MAX_IPS][64];
     char     single_ip[64];
     size_t   all_count;
-} cf_resolve_snapshot;
+} cf_resolve_view;
 
 /* ── DNS resolution result ───────────────────────────────────────────── */
 
@@ -102,7 +102,7 @@ void          cf_cache_insert(cf_ctx *ctx, cf_dns_entry *entry);
 void          cf_cache_remove(cf_ctx *ctx, cf_dns_entry *entry);
 void          cf_cache_touch(cf_ctx *ctx, cf_dns_entry *entry);
 int cf_resolve_snapshot(cf_ctx *ctx, const char *host, uint16_t port,
-                        cf_resolve_snapshot *snap);
+                        cf_resolve_view *snap);
 void cf_dns_entry_unref(cf_ctx *ctx, cf_dns_entry *entry);
 
 /* ── Probe ───────────────────────────────────────────────────────────── */

@@ -323,7 +323,7 @@ static int cf_entry_populate(cf_ctx *ctx, cf_dns_entry *entry)
     return 0;
 }
 
-static void cf_snapshot_from_entry(cf_dns_entry *entry, cf_resolve_snapshot *snap)
+static void cf_snapshot_from_entry(cf_dns_entry *entry, cf_resolve_view *snap)
 {
     memset(snap, 0, sizeof(*snap));
     snap->ok = 1;
@@ -394,7 +394,7 @@ static void cf_cache_insert_locked(cf_ctx *ctx, cf_dns_entry *entry)
  * DNS/probe runs outside cache_mutex on miss/TTL refresh.
  */
 int cf_resolve_snapshot(cf_ctx *ctx, const char *host, uint16_t port,
-                        cf_resolve_snapshot *snap)
+                        cf_resolve_view *snap)
 {
     if (!ctx || !host || !snap)
         return -1;

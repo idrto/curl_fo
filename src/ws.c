@@ -9,7 +9,7 @@ struct cf_ws {
     char                  host[256];
     uint16_t              port;
     char                  url[4096];
-    cf_resolve_snapshot   snap;
+    cf_resolve_view       snap;
     size_t                current_ip;
     int                   retry_same;
     int                   connected;
@@ -73,7 +73,7 @@ cf_ws *cf_ws_connect(cf_ctx *ctx, const char *url)
 
     cf_vlog(ctx->cfg, "WebSocket connect %s\n", url);
 
-    cf_resolve_snapshot snap;
+    cf_resolve_view snap;
     if (cf_resolve_snapshot(ctx, host, port, &snap) < 0 || !snap.ok)
         return NULL;
 
