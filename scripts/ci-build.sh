@@ -8,54 +8,52 @@ BUILD="$ROOT/build-${TRIPLE}"
 VERSION="1.0.0"
 
 CMAKE_COMMON=(
+    -G Ninja
     -DCMAKE_BUILD_TYPE=Release
     -DCURL_FO_BUILD_TESTS=OFF
     -DCURL_FO_BUILD_EXAMPLE=OFF
 )
 
+build_cmake() {
+    cmake -S "$ROOT" -B "$BUILD" "$@"
+    cmake --build "$BUILD" --parallel
+}
+
 vcpkg_build() {
     local triplet="$1"
     shift
-    vcpkg install "curl:${triplet}"
+    "$VCPKG_ROOT/vcpkg" install "curl:${triplet}"
     build_cmake "${CMAKE_COMMON[@]}" \
         -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
         -DVCPKG_TARGET_TRIPLET="${triplet}" \
         "$@"
 }
 
-build_cmake() {
-    cmake -S "$ROOT" -B "$BUILD" "$@"
-    cmake --build "$BUILD" --config Release --parallel
+macos_curl_prefix() {
+    if [ -d /opt/homebrew/opt/curl ]; then
+        echo /opt/homebrew/opt/curl
+    else
+        brew --prefix curl
+    fi
 }
 
 case "$TRIPLE" in
-    x86_64-unknown-linux-gnu)
+    x86_64-unknown-linux-gnu|aarch64-unknown-linux-gnu)
         build_cmake "${CMAKE_COMMON[@]}"
         ;;
-    aarch64-unknown-linux-gnu)
-        sudo dpkg --add-architecture arm64 2>/dev/null || true
-        sudo apt-get update -qq
-        sudo apt-get install -y -qq gcc-aarch64-linux-gnu \
-            libcurl4-openssl-dev:arm64
-        build_cmake "${CMAKE_COMMON[@]}" \
-            -DCMAKE_SYSTEM_NAME=Linux \
-            -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
-            -DCMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu \
-            -DCURL_INCLUDE_DIR=/usr/include/aarch64-linux-gnu \
-            -DCURL_LIBRARY=/usr/lib/aarch64-linux-gnu/libcurl.so
-        ;;
     x86_64-apple-darwin)
-        brew install curl
+        PREFIX="$(macos_curl_prefix)"
         build_cmake "${CMAKE_COMMON[@]}" \
             -DCMAKE_OSX_ARCHITECTURES=x86_64 \
-            -DCMAKE_IGNORE_PATH="/opt/homebrew" \
-            -DCURL_ROOT="$(brew --prefix curl)"
+            -DCMAKE_PREFIX_PATH="${PREFIX}" \
+            -DCURL_ROOT="${PREFIX}"
         ;;
     aarch64-apple-darwin)
-        brew install curl
+        PREFIX="$(macos_curl_prefix)"
         build_cmake "${CMAKE_COMMON[@]}" \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
-            -DCURL_ROOT="$(brew --prefix curl)"
+            -DCMAKE_PREFIX_PATH="${PREFIX}" \
+            -DCURL_ROOT="${PREFIX}"
         ;;
     x86_64-pc-windows-msvc)
         vcpkg_build x64-windows

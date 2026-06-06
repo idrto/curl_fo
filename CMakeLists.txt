@@ -22,7 +22,11 @@ endif()
 
 # Allow -DCURL_ROOT= or -DCURL_INCLUDE_DIR= / -DCURL_LIBRARY=
 if(DEFINED ENV{VCPKG_ROOT})
-    list(APPEND CMAKE_PREFIX_PATH "$ENV{VCPKG_ROOT}/installed/x64-windows")
+    if(DEFINED VCPKG_TARGET_TRIPLET)
+        list(APPEND CMAKE_PREFIX_PATH "$ENV{VCPKG_ROOT}/installed/${VCPKG_TARGET_TRIPLET}")
+    else()
+        list(APPEND CMAKE_PREFIX_PATH "$ENV{VCPKG_ROOT}/installed/x64-windows")
+    endif()
 endif()
 find_package(CURL QUIET)
 if(NOT CURL_FOUND)

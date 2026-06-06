@@ -12,6 +12,7 @@ ARCHIVE_NAME="curl_fo-${VERSION}-${TRIPLE}"
 
 rm -rf "$STAGING"
 mkdir -p "$STAGING" "$DIST"
+touch "$DIST/checksums.txt" 2>/dev/null || true
 
 cmake --install "$BUILD_DIR" --prefix "$STAGING"
 

@@ -11,7 +11,7 @@ permissions:
 
 env:
   VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
-  VCPKG_COMMIT: "2024.12.16"
+  VCPKG_COMMIT: "c16c1bd46c7f6de21efc6dcf19c1069d6825df23"
 
 jobs:
   build:
@@ -25,8 +25,8 @@ jobs:
             runner: ubuntu-latest
             setup: linux-gnu
           - triple: aarch64-unknown-linux-gnu
-            runner: ubuntu-latest
-            setup: linux-arm64
+            runner: ubuntu-24.04-arm
+            setup: linux-gnu
           - triple: x86_64-apple-darwin
             runner: macos-13
             setup: macos-x64
@@ -65,14 +65,6 @@ jobs:
         if: matrix.setup == 'linux-gnu'
         run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev cmake ninja-build zip
 
-      - name: Install Linux cross deps
-        if: matrix.setup == 'linux-arm64'
-        run: |
-          sudo dpkg --add-architecture arm64
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu libcurl4-openssl-dev:arm64 \
-            cmake ninja-build zip
-
       - name: Install macOS deps
         if: matrix.setup == 'macos-x64' || matrix.setup == 'macos-arm64'
         run: brew install curl cmake ninja
@@ -84,9 +76,15 @@ jobs:
           vcpkgGitCommitId: ${{ env.VCPKG_COMMIT }}
           runVcpkgInstall: false
 
+      - name: Setup MSVC
+        if: matrix.setup == 'windows-msvc'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ contains(matrix.triple, 'aarch64') && 'arm64' || 'x64' }}
+
       - name: Install Windows build tools
         if: matrix.setup == 'windows-msvc'
-        run: choco install cmake ninja zip -y
+        run: choco install ninja zip -y
 
       - name: Install vcpkg mobile prerequisites
         if: matrix.setup == 'vcpkg-mobile'
@@ -101,10 +99,12 @@ jobs:
       - name: Build and package
         shell: bash
         run: |
+          perl -pi -e 's/\r$//' scripts/*.sh 2>/dev/null || true
           chmod +x scripts/*.sh
+          mkdir -p dist
           rm -f dist/checksums.txt
           export VCPKG_ROOT="${{ github.workspace }}/vcpkg"
-          ./scripts/ci-build.sh "${{ matrix.triple }}"
+          bash scripts/ci-build.sh "${{ matrix.triple }}"
 
       - name: Upload triple artifact
         uses: actions/upload-artifact@v4
