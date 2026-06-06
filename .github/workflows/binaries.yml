@@ -28,7 +28,7 @@ jobs:
             runner: ubuntu-24.04-arm
             setup: linux-gnu
           - triple: x86_64-apple-darwin
-            runner: macos-13
+            runner: macos-latest
             setup: macos-x64
           - triple: aarch64-apple-darwin
             runner: macos-latest
