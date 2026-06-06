@@ -1,0 +1,178 @@
+name: Binaries
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+  VCPKG_COMMIT: "2024.12.16"
+
+jobs:
+  build:
+    name: ${{ matrix.triple }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - triple: x86_64-unknown-linux-gnu
+            runner: ubuntu-latest
+            setup: linux-gnu
+          - triple: aarch64-unknown-linux-gnu
+            runner: ubuntu-latest
+            setup: linux-arm64
+          - triple: x86_64-apple-darwin
+            runner: macos-13
+            setup: macos-x64
+          - triple: aarch64-apple-darwin
+            runner: macos-latest
+            setup: macos-arm64
+          - triple: x86_64-pc-windows-msvc
+            runner: windows-latest
+            setup: windows-msvc
+          - triple: aarch64-pc-windows-msvc
+            runner: windows-11-arm
+            setup: windows-msvc
+          - triple: aarch64-linux-android
+            runner: ubuntu-latest
+            setup: vcpkg-mobile
+          - triple: armv7-linux-androideabi
+            runner: ubuntu-latest
+            setup: vcpkg-mobile
+          - triple: x86_64-linux-android
+            runner: ubuntu-latest
+            setup: vcpkg-mobile
+          - triple: aarch64-apple-ios
+            runner: macos-latest
+            setup: vcpkg-mobile
+          - triple: aarch64-apple-ios-sim
+            runner: macos-latest
+            setup: vcpkg-mobile
+          - triple: x86_64-apple-ios-sim
+            runner: macos-latest
+            setup: vcpkg-mobile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux deps
+        if: matrix.setup == 'linux-gnu'
+        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev cmake ninja-build zip
+
+      - name: Install Linux cross deps
+        if: matrix.setup == 'linux-arm64'
+        run: |
+          sudo dpkg --add-architecture arm64
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu libcurl4-openssl-dev:arm64 \
+            cmake ninja-build zip
+
+      - name: Install macOS deps
+        if: matrix.setup == 'macos-x64' || matrix.setup == 'macos-arm64'
+        run: brew install curl cmake ninja
+
+      - name: Setup vcpkg
+        if: matrix.setup == 'windows-msvc' || matrix.setup == 'vcpkg-mobile'
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: ${{ env.VCPKG_COMMIT }}
+          runVcpkgInstall: false
+
+      - name: Install Windows build tools
+        if: matrix.setup == 'windows-msvc'
+        run: choco install cmake ninja zip -y
+
+      - name: Install vcpkg mobile prerequisites
+        if: matrix.setup == 'vcpkg-mobile'
+        run: |
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            sudo apt-get update
+            sudo apt-get install -y cmake ninja-build zip curl
+          else
+            brew install cmake ninja curl
+          fi
+
+      - name: Build and package
+        shell: bash
+        run: |
+          chmod +x scripts/*.sh
+          rm -f dist/checksums.txt
+          export VCPKG_ROOT="${{ github.workspace }}/vcpkg"
+          ./scripts/ci-build.sh "${{ matrix.triple }}"
+
+      - name: Upload triple artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: curl_fo-${{ matrix.triple }}
+          path: dist/curl_fo-1.0.0-${{ matrix.triple }}.*
+          if-no-files-found: error
+
+  manifest:
+    name: manifest
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: curl_fo-*
+          merge-multiple: true
+
+      - name: Generate manifest
+        run: |
+          mkdir -p dist
+          cp artifacts/curl_fo-* dist/ 2>/dev/null || cp artifacts/*/curl_fo-* dist/ || true
+          find dist -name 'curl_fo-*' -type f | sort > dist/files.txt
+          sha256sum dist/curl_fo-* > dist/checksums.txt || shasum -a 256 dist/curl_fo-* > dist/checksums.txt
+          python3 - <<'PY'
+          import hashlib, json, pathlib
+          dist = pathlib.Path("dist")
+          entries = []
+          for f in sorted(dist.glob("curl_fo-*")):
+              if f.is_file() and f.suffix in (".gz", ".zip"):
+                  h = hashlib.sha256(f.read_bytes()).hexdigest()
+                  entries.append({"file": f.name, "sha256": h, "bytes": f.stat().st_size})
+          (dist / "manifest.json").write_text(json.dumps({"version":"1.0.0","artifacts":entries}, indent=2))
+          PY
+
+      - name: Upload manifest bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: curl_fo-manifest
+          path: |
+            dist/curl_fo-*
+            dist/manifest.json
+            dist/checksums.txt
+            dist/files.txt
+
+  release:
+    name: release
+    needs: [build, manifest]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          pattern: curl_fo*
+          merge-multiple: true
+
+      - name: Flatten release files
+        run: |
+          mkdir -p upload
+          find release -name 'curl_fo-*' -type f -exec cp {} upload/ \;
+          find release -name 'manifest.json' -exec cp {} upload/ \;
+          find release -name 'checksums.txt' -exec cp {} upload/ \;
+          ls -la upload/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: upload/*
+          generate_release_notes: true

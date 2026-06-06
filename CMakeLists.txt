@@ -5,10 +5,20 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
+option(CURL_FO_MOBILE_BUILD "Android/iOS build (no shim/wrapper/CLI)" OFF)
 option(CURL_FO_BUILD_SHIM "Build LD_PRELOAD shim" ON)
 option(CURL_FO_BUILD_WRAPPER "Build libcurl-compatible wrapper" ON)
 option(CURL_FO_BUILD_CLI "Build curl-fo CLI" ON)
 option(CURL_FO_BUILD_TESTS "Build tests" ON)
+option(CURL_FO_BUILD_EXAMPLE "Build example binary" OFF)
+
+if(CURL_FO_MOBILE_BUILD)
+    set(CURL_FO_BUILD_SHIM OFF CACHE BOOL "" FORCE)
+    set(CURL_FO_BUILD_WRAPPER OFF CACHE BOOL "" FORCE)
+    set(CURL_FO_BUILD_CLI OFF CACHE BOOL "" FORCE)
+    set(CURL_FO_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(CURL_FO_BUILD_EXAMPLE OFF CACHE BOOL "" FORCE)
+endif()
 
 # Allow -DCURL_ROOT= or -DCURL_INCLUDE_DIR= / -DCURL_LIBRARY=
 if(DEFINED ENV{VCPKG_ROOT})
@@ -17,9 +27,11 @@ endif()
 find_package(CURL QUIET)
 if(NOT CURL_FOUND)
     find_path(CURL_INCLUDE_DIR NAMES curl/curl.h
-        HINTS "${CURL_ROOT}/include" "C:/curl/include" "$ENV{CURL_ROOT}/include")
-    find_library(CURL_LIBRARY NAMES curl libcurl libcurl_imp
-        HINTS "${CURL_ROOT}/lib" "C:/curl/lib" "$ENV{CURL_ROOT}/lib")
+        HINTS "${CURL_ROOT}/include" "C:/curl/include" "$ENV{CURL_ROOT}/include"
+              "${CMAKE_SOURCE_DIR}/deps/install/include")
+    find_library(CURL_LIBRARY NAMES curl libcurl libcurl_imp libcurl.a
+        HINTS "${CURL_ROOT}/lib" "C:/curl/lib" "$ENV{CURL_ROOT}/lib"
+              "${CMAKE_SOURCE_DIR}/deps/install/lib")
     if(CURL_INCLUDE_DIR AND CURL_LIBRARY)
         add_library(CURL::libcurl UNKNOWN IMPORTED)
         set_target_properties(CURL::libcurl PROPERTIES
@@ -61,6 +73,8 @@ set_target_properties(curl_fo PROPERTIES
 
 if(WIN32)
     target_link_libraries(curl_fo PRIVATE ws2_32 iphlpapi)
+elseif(ANDROID OR (APPLE AND CMAKE_SYSTEM_NAME STREQUAL "iOS"))
+    target_link_libraries(curl_fo PRIVATE log)
 endif()
 
 add_library(curl_fo_static STATIC ${CURL_FO_CORE_SOURCES})
@@ -130,13 +144,34 @@ if(CURL_FO_BUILD_TESTS)
     add_test(NAME curl_fo_tests COMMAND curl_fo_tests)
 endif()
 
-install(TARGETS curl_fo
+if(CURL_FO_BUILD_EXAMPLE)
+    add_executable(curl_fo_example examples/simple_http.c)
+    target_include_directories(curl_fo_example PRIVATE ${CMAKE_SOURCE_DIR}/include)
+    target_link_libraries(curl_fo_example PRIVATE curl_fo CURL::libcurl)
+endif()
+
+# ── Install / packaging ───────────────────────────────────────────────────
+install(TARGETS curl_fo curl_fo_static
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
-    RUNTIME DESTINATION bin
+    RUNTIME DESTINATION lib
     PUBLIC_HEADER DESTINATION include)
 install(FILES include/curl_fo.h DESTINATION include)
 
-add_executable(curl_fo_example examples/simple_http.c)
-target_include_directories(curl_fo_example PRIVATE ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(curl_fo_example PRIVATE curl_fo CURL::libcurl)
+if(CURL_FO_BUILD_SHIM)
+    install(TARGETS curl_fo_shim
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+        RUNTIME DESTINATION lib)
+endif()
+
+if(CURL_FO_BUILD_WRAPPER)
+    install(TARGETS curl_fo_wrapper
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+        RUNTIME DESTINATION lib)
+endif()
+
+if(CURL_FO_BUILD_CLI)
+    install(TARGETS curl-fo RUNTIME DESTINATION bin)
+endif()

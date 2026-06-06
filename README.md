@@ -21,9 +21,44 @@
 | **Flutter FFI** | Dart bindings in `ffi/` |
 | **Three integration modes** | Explicit API · LD_PRELOAD shim · libcurl wrapper |
 
+## Prebuilt binaries (v1.0.0)
+
+Official builds for **12 Flutter/desktop triples** are published on every push to `main` as [GitHub Actions artifacts](https://github.com/idrto/curl_fo/actions/workflows/binaries.yml), and on version tags as [GitHub Releases](https://github.com/idrto/curl_fo/releases).
+
+### Download v1.0.0
+
+```text
+# Linux / macOS / Android / iOS
+https://github.com/idrto/curl_fo/releases/download/v1.0.0/curl_fo-1.0.0-<triple>.tar.gz
+
+# Windows
+https://github.com/idrto/curl_fo/releases/download/v1.0.0/curl_fo-1.0.0-<triple>.zip
+```
+
+Replace `<triple>` with your target, e.g. `aarch64-apple-darwin`, `x86_64-pc-windows-msvc`, `aarch64-linux-android`.
+
+| Triple | Platform |
+|--------|----------|
+| `x86_64-unknown-linux-gnu` | Linux x64 |
+| `aarch64-unknown-linux-gnu` | Linux arm64 |
+| `x86_64-apple-darwin` | macOS x64 |
+| `aarch64-apple-darwin` | macOS arm64 |
+| `x86_64-pc-windows-msvc` | Windows x64 |
+| `aarch64-pc-windows-msvc` | Windows arm64 |
+| `aarch64-linux-android` | Android arm64-v8a |
+| `armv7-linux-androideabi` | Android armeabi-v7a |
+| `x86_64-linux-android` | Android x86_64 |
+| `aarch64-apple-ios` | iOS device |
+| `aarch64-apple-ios-sim` | iOS sim (arm64) |
+| `x86_64-apple-ios-sim` | iOS sim (x64) |
+
+Each archive contains `include/curl_fo.h`, `lib/` (and `bin/curl-fo` on desktop). Verify integrity with `checksums.txt` from the release.
+
+See [ffi/README.md](ffi/README.md) for Flutter integration.
+
 ## Quick start
 
-### Build
+### Build from source
 
 ```bash
 cmake -B build -DCMAKE_BUILD_TYPE=Release
