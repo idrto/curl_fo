@@ -12,6 +12,7 @@ int test_dns_run(void)
         ASSERT(res.count >= 1);
         ASSERT(res.ttl_sec > 0);
         cf_dns_result_free(&res);
+        memset(&res, 0, sizeof(res));
     }
 
     cf_dns_result_free(&res);

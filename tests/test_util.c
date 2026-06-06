@@ -2,6 +2,8 @@
 #include "internal.h"
 #include "test_harness.h"
 
+#include <string.h>
+
 int test_util_run(void)
 {
     char host[128];

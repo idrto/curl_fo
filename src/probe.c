@@ -24,7 +24,8 @@
 static unsigned cf_round_bucket(unsigned ms, unsigned bucket)
 {
     if (bucket == 0) bucket = 10;
-    return ((ms + bucket - 1) / bucket) * bucket;
+    unsigned rounded = ((ms + bucket - 1) / bucket) * bucket;
+    return rounded == 0 ? bucket : rounded;
 }
 
 static int cf_tcp_connect_latency(const char *addr, uint16_t port,
