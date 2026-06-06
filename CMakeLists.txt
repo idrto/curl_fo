@@ -35,8 +35,8 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Android" OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
         HINTS "${CURL_ROOT}/lib" "$ENV{CURL_ROOT}/lib")
     find_library(CURL_CRYPTO_LIBRARY NAMES crypto libcrypto libcrypto.a
         HINTS "${CURL_ROOT}/lib" "$ENV{CURL_ROOT}/lib")
-    find_library(CURL_Z_LIBRARY NAMES z libz libz.a
-        HINTS "${CURL_ROOT}/lib" "$ENV{CURL_ROOT}/lib")
+    find_library(CURL_Z_LIBRARY NAMES libz.a z
+        PATHS "${CURL_ROOT}/lib" NO_DEFAULT_PATH)
     if(CURL_INCLUDE_DIR AND CURL_LIBRARY)
         add_library(CURL::libcurl UNKNOWN IMPORTED)
         set_target_properties(CURL::libcurl PROPERTIES
@@ -109,11 +109,13 @@ set_target_properties(curl_fo PROPERTIES
 if(WIN32)
     target_link_libraries(curl_fo PRIVATE ws2_32 iphlpapi)
 elseif(ANDROID)
-    target_link_libraries(curl_fo PRIVATE log dl)
-    if(CURL_SSL_LIBRARY AND CURL_CRYPTO_LIBRARY)
-        target_link_libraries(curl_fo PRIVATE
-            ${CURL_SSL_LIBRARY} ${CURL_CRYPTO_LIBRARY} ${CURL_Z_LIBRARY})
-    endif()
+    target_compile_definitions(curl_fo PRIVATE _FORTIFY_SOURCE=0)
+    target_link_libraries(curl_fo PRIVATE
+        -Wl,--start-group
+        CURL::libcurl
+        ${CURL_SSL_LIBRARY} ${CURL_CRYPTO_LIBRARY} ${CURL_Z_LIBRARY}
+        -Wl,--end-group
+        log dl)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     if(CURL_SSL_LIBRARY AND CURL_CRYPTO_LIBRARY)
         target_link_libraries(curl_fo PRIVATE
@@ -134,11 +136,13 @@ target_link_libraries(curl_fo_static PRIVATE CURL::libcurl)
 if(WIN32)
     target_link_libraries(curl_fo_static PRIVATE ws2_32 iphlpapi)
 elseif(ANDROID)
-    target_link_libraries(curl_fo_static PRIVATE log dl)
-    if(CURL_SSL_LIBRARY AND CURL_CRYPTO_LIBRARY)
-        target_link_libraries(curl_fo_static PRIVATE
-            ${CURL_SSL_LIBRARY} ${CURL_CRYPTO_LIBRARY} ${CURL_Z_LIBRARY})
-    endif()
+    target_compile_definitions(curl_fo_static PRIVATE _FORTIFY_SOURCE=0)
+    target_link_libraries(curl_fo_static PRIVATE
+        -Wl,--start-group
+        CURL::libcurl
+        ${CURL_SSL_LIBRARY} ${CURL_CRYPTO_LIBRARY} ${CURL_Z_LIBRARY}
+        -Wl,--end-group
+        log dl)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     if(CURL_SSL_LIBRARY AND CURL_CRYPTO_LIBRARY)
         target_link_libraries(curl_fo_static PRIVATE
