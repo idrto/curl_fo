@@ -107,11 +107,7 @@ case "$TRIPLE" in
         build_native
         ;;
     x86_64-apple-darwin)
-        PREFIX="$(macos_curl_prefix)"
-        build_native \
-            -DCMAKE_OSX_ARCHITECTURES=x86_64 \
-            -DCMAKE_PREFIX_PATH="${PREFIX}" \
-            -DCURL_ROOT="${PREFIX}"
+        build_vcpkg x64-osx
         ;;
     aarch64-apple-darwin)
         PREFIX="$(macos_curl_prefix)"
