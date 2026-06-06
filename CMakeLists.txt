@@ -31,6 +31,12 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Android" OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
         HINTS "${CURL_ROOT}/include" "$ENV{CURL_ROOT}/include")
     find_library(CURL_LIBRARY NAMES curl libcurl libcurl.a
         HINTS "${CURL_ROOT}/lib" "$ENV{CURL_ROOT}/lib")
+    find_library(CURL_SSL_LIBRARY NAMES ssl libssl libssl.a
+        HINTS "${CURL_ROOT}/lib" "$ENV{CURL_ROOT}/lib")
+    find_library(CURL_CRYPTO_LIBRARY NAMES crypto libcrypto libcrypto.a
+        HINTS "${CURL_ROOT}/lib" "$ENV{CURL_ROOT}/lib")
+    find_library(CURL_Z_LIBRARY NAMES z libz libz.a
+        HINTS "${CURL_ROOT}/lib" "$ENV{CURL_ROOT}/lib")
     if(CURL_INCLUDE_DIR AND CURL_LIBRARY)
         add_library(CURL::libcurl UNKNOWN IMPORTED)
         set_target_properties(CURL::libcurl PROPERTIES
@@ -102,8 +108,21 @@ set_target_properties(curl_fo PROPERTIES
 
 if(WIN32)
     target_link_libraries(curl_fo PRIVATE ws2_32 iphlpapi)
-elseif(ANDROID OR (APPLE AND CMAKE_SYSTEM_NAME STREQUAL "iOS"))
-    target_link_libraries(curl_fo PRIVATE log)
+elseif(ANDROID)
+    target_link_libraries(curl_fo PRIVATE log dl)
+    if(CURL_SSL_LIBRARY AND CURL_CRYPTO_LIBRARY)
+        target_link_libraries(curl_fo PRIVATE
+            ${CURL_SSL_LIBRARY} ${CURL_CRYPTO_LIBRARY} ${CURL_Z_LIBRARY})
+    endif()
+elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    if(CURL_SSL_LIBRARY AND CURL_CRYPTO_LIBRARY)
+        target_link_libraries(curl_fo PRIVATE
+            ${CURL_SSL_LIBRARY} ${CURL_CRYPTO_LIBRARY} ${CURL_Z_LIBRARY})
+    endif()
+    target_link_libraries(curl_fo PRIVATE
+        "-framework Security"
+        "-framework SystemConfiguration"
+        "-framework CoreFoundation")
 endif()
 
 add_library(curl_fo_static STATIC ${CURL_FO_CORE_SOURCES})
@@ -114,6 +133,21 @@ target_compile_definitions(curl_fo_static PRIVATE CURL_FO_BUILDING)
 target_link_libraries(curl_fo_static PRIVATE CURL::libcurl)
 if(WIN32)
     target_link_libraries(curl_fo_static PRIVATE ws2_32 iphlpapi)
+elseif(ANDROID)
+    target_link_libraries(curl_fo_static PRIVATE log dl)
+    if(CURL_SSL_LIBRARY AND CURL_CRYPTO_LIBRARY)
+        target_link_libraries(curl_fo_static PRIVATE
+            ${CURL_SSL_LIBRARY} ${CURL_CRYPTO_LIBRARY} ${CURL_Z_LIBRARY})
+    endif()
+elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    if(CURL_SSL_LIBRARY AND CURL_CRYPTO_LIBRARY)
+        target_link_libraries(curl_fo_static PRIVATE
+            ${CURL_SSL_LIBRARY} ${CURL_CRYPTO_LIBRARY} ${CURL_Z_LIBRARY})
+    endif()
+    target_link_libraries(curl_fo_static PRIVATE
+        "-framework Security"
+        "-framework SystemConfiguration"
+        "-framework CoreFoundation")
 endif()
 
 if(CURL_FO_BUILD_SHIM)
