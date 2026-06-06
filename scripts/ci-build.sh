@@ -130,7 +130,7 @@ case "$TRIPLE" in
         build_android arm64-android arm64-v8a
         ;;
     armv7-linux-androideabi)
-        build_android arm-android armeabi-v7a
+        build_android arm-neon-android armeabi-v7a
         ;;
     x86_64-linux-android)
         build_android x64-android x86_64

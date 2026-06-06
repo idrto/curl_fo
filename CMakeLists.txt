@@ -24,6 +24,9 @@ endif()
 if(CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg")
     find_package(CURL CONFIG REQUIRED)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Android" OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
+    set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH)
+    list(APPEND CMAKE_PREFIX_PATH "${CURL_ROOT}")
     find_path(CURL_INCLUDE_DIR NAMES curl/curl.h
         HINTS "${CURL_ROOT}/include" "$ENV{CURL_ROOT}/include")
     find_library(CURL_LIBRARY NAMES curl libcurl libcurl.a
