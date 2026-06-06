@@ -4,7 +4,7 @@ set -euo pipefail
 
 BUILD_DIR="${1:?build dir}"
 TRIPLE="${2:?triple}"
-VERSION="${3:-1.0.0}"
+VERSION="${3:-1.0.1}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DIST="$ROOT/dist"
 STAGING="$DIST/staging-${TRIPLE}"

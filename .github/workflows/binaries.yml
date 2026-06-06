@@ -113,7 +113,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: curl_fo-${{ matrix.triple }}
-          path: dist/curl_fo-1.0.0-${{ matrix.triple }}.*
+          path: dist/curl_fo-*-${{ matrix.triple }}.*
           if-no-files-found: error
 
   manifest:
@@ -134,14 +134,21 @@ jobs:
           find dist -name 'curl_fo-*' -type f | sort > dist/files.txt
           sha256sum dist/curl_fo-* > dist/checksums.txt || shasum -a 256 dist/curl_fo-* > dist/checksums.txt
           python3 - <<'PY'
-          import hashlib, json, pathlib
+          import hashlib, json, pathlib, re
           dist = pathlib.Path("dist")
           entries = []
+          version = None
           for f in sorted(dist.glob("curl_fo-*")):
               if f.is_file() and f.suffix in (".gz", ".zip"):
                   h = hashlib.sha256(f.read_bytes()).hexdigest()
                   entries.append({"file": f.name, "sha256": h, "bytes": f.stat().st_size})
-          (dist / "manifest.json").write_text(json.dumps({"version":"1.0.0","artifacts":entries}, indent=2))
+                  if version is None:
+                      m = re.match(r"curl_fo-([\d.]+)-", f.name)
+                      if m:
+                          version = m.group(1)
+          if version is None:
+              version = "unknown"
+          (dist / "manifest.json").write_text(json.dumps({"version": version, "artifacts": entries}, indent=2))
           PY
 
       - name: Upload manifest bundle
