@@ -25,6 +25,7 @@ typedef CURLcode (*cf_curl_ws_send_fn)(CURL *, const void *, size_t, size_t *,
 typedef CURLcode (*cf_curl_ws_recv_fn)(CURL *, void *, size_t, size_t *,
                                        const struct curl_ws_frame **);
 typedef curl_version_info_data *(*cf_curl_version_info_fn)(CURLversion);
+typedef const char *(*cf_curl_strerror_fn)(CURLcode);
 
 static cf_curl_perform_fn      p_perform;
 static cf_curl_setopt_fn       p_setopt;
@@ -36,6 +37,7 @@ static cf_curl_slist_free_fn   p_slist_free;
 static cf_curl_ws_send_fn      p_ws_send;
 static cf_curl_ws_recv_fn      p_ws_recv;
 static cf_curl_version_info_fn p_version_info;
+static cf_curl_strerror_fn     p_strerror;
 static int                     dispatch_ready;
 
 #if defined(CURL_FO_SHIM_BUILD) || defined(CURL_FO_WRAPPER_BUILD)
@@ -76,6 +78,7 @@ static void cf_dispatch_init(void)
     p_ws_send      = (cf_curl_ws_send_fn)cf_dispatch_sym("curl_ws_send");
     p_ws_recv      = (cf_curl_ws_recv_fn)cf_dispatch_sym("curl_ws_recv");
     p_version_info = (cf_curl_version_info_fn)cf_dispatch_sym("curl_version_info");
+    p_strerror     = (cf_curl_strerror_fn)cf_dispatch_sym("curl_easy_strerror");
     dispatch_ready = 1;
 }
 #else
@@ -93,9 +96,23 @@ static void cf_dispatch_init(void)
     p_ws_send      = curl_ws_send;
     p_ws_recv      = curl_ws_recv;
     p_version_info = curl_version_info;
+    p_strerror     = curl_easy_strerror;
     dispatch_ready = 1;
 }
 #endif
+
+static const char *cf_curl_code_str(CURLcode code)
+{
+    switch (code) {
+    case CURLE_OK: return "No error";
+    case CURLE_COULDNT_CONNECT: return "Couldn't connect to server";
+    case CURLE_COULDNT_RESOLVE_HOST: return "Couldn't resolve host name";
+    case CURLE_OPERATION_TIMEDOUT: return "Timeout was reached";
+    case CURLE_UNSUPPORTED_PROTOCOL: return "Unsupported protocol";
+    case CURLE_FAILED_INIT: return "Failed initialization";
+    default: return "Unknown error";
+    }
+}
 
 curl_version_info_data *cf_curl_version_info(CURLversion ver)
 {
@@ -165,4 +182,10 @@ CURLcode cf_curl_ws_recv(CURL *curl, void *buf, size_t len, size_t *recvd,
     cf_dispatch_init();
     return p_ws_recv ? p_ws_recv(curl, buf, len, recvd, meta)
                      : CURLE_UNSUPPORTED_PROTOCOL;
+}
+
+const char *cf_curl_easy_strerror(CURLcode code)
+{
+    cf_dispatch_init();
+    return p_strerror ? p_strerror(code) : cf_curl_code_str(code);
 }

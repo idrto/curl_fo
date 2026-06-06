@@ -158,5 +158,6 @@ CURLcode cf_curl_ws_send(CURL *curl, const void *buf, size_t len, size_t *sent,
 CURLcode cf_curl_ws_recv(CURL *curl, void *buf, size_t len, size_t *recvd,
                          const struct curl_ws_frame **meta);
 curl_version_info_data *cf_curl_version_info(CURLversion ver);
+const char *cf_curl_easy_strerror(CURLcode code);
 
 #endif /* CURL_FO_INTERNAL_H */

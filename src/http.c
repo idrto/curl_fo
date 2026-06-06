@@ -70,7 +70,7 @@ static CURLcode cf_perform_with_ip(cf_ctx *ctx, CURL *curl,
     cf_curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
 
     cf_vlog(cfg, "result on %s: curl=%d (%s) http=%ld\n",
-            ip, (int)rc, curl_easy_strerror(rc), http_code);
+            ip, (int)rc, cf_curl_easy_strerror(rc), http_code);
 
     cf_curl_easy_setopt(curl, CURLOPT_RESOLVE, NULL);
     cf_curl_easy_setopt(curl, CURLOPT_HTTPHEADER, cf_shadow_get_headers(curl));
@@ -151,7 +151,7 @@ CURLcode cf_easy_perform(cf_ctx *ctx, CURL *curl)
     }
 
     cf_vlog(cfg, "all %zu ranked IP(s) failed — giving up (%s)\n",
-            attempts, curl_easy_strerror(last));
+            attempts, cf_curl_easy_strerror(last));
     return last;
 }
 

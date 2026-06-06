@@ -52,7 +52,7 @@ static CURLcode cf_ws_try_connect(cf_ws *ws, size_t ip_index, const char *phase)
     cf_curl_easy_setopt(ws->curl, CURLOPT_RESOLVE, NULL);
     cf_curl_slist_free_all(resolve);
 
-    cf_vlog(cfg, "WebSocket connect to %s: %s\n", ip, curl_easy_strerror(rc));
+    cf_vlog(cfg, "WebSocket connect to %s: %s\n", ip, cf_curl_easy_strerror(rc));
     if (rc == CURLE_OK)
         ws->current_ip = ip_index;
     return rc;
@@ -111,7 +111,7 @@ cf_ws *cf_ws_connect(cf_ctx *ctx, const char *url)
         cf_curl_easy_setopt(ws->curl, CURLOPT_RESOLVE, NULL);
         cf_curl_slist_free_all(sl);
         if (rc != CURLE_OK) {
-            cf_vlog(ctx->cfg, "WebSocket connect failed: %s\n", curl_easy_strerror(rc));
+            cf_vlog(ctx->cfg, "WebSocket connect failed: %s\n", cf_curl_easy_strerror(rc));
             cf_ws_close(ws);
             return NULL;
         }
@@ -180,7 +180,7 @@ cf_ws_result cf_ws_send(cf_ws *ws, const void *data, size_t len,
         return CF_WS_OK;
     if (rc == CURLE_AGAIN)
         return CF_WS_ERR;
-    cf_vlog(ws->ctx->cfg, "WebSocket send error: %s\n", curl_easy_strerror(rc));
+    cf_vlog(ws->ctx->cfg, "WebSocket send error: %s\n", cf_curl_easy_strerror(rc));
     if (cf_ws_reconnect(ws) == CURLE_OK) {
         cf_vlog(ws->ctx->cfg, "WebSocket send retry after reconnect\n");
         rc = cf_curl_ws_send(ws->curl, data, len, sent, 0, flags);
@@ -200,7 +200,7 @@ cf_ws_result cf_ws_recv(cf_ws *ws, void *buf, size_t buflen,
         return CF_WS_OK;
     if (rc == CURLE_AGAIN)
         return CF_WS_ERR;
-    cf_vlog(ws->ctx->cfg, "WebSocket recv error: %s\n", curl_easy_strerror(rc));
+    cf_vlog(ws->ctx->cfg, "WebSocket recv error: %s\n", cf_curl_easy_strerror(rc));
     if (cf_ws_reconnect(ws) == CURLE_OK) {
         cf_vlog(ws->ctx->cfg, "WebSocket reconnected — caller should recv again\n");
         return CF_WS_ERR;
