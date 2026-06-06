@@ -15,7 +15,7 @@
 #  include <fcntl.h>
 #  include <pthread.h>
 #  include <unistd.h>
-#  if defined(__linux__) || defined(__ANDROID__)
+#  if defined(__linux__) && !defined(__ANDROID__)
 #    include <sys/random.h>
 #  endif
 #endif
@@ -50,7 +50,7 @@ static int cf_fill_random(unsigned char *buf, size_t len)
     size_t off = 0;
     while (off < len) {
         ssize_t n = -1;
-#  if defined(__linux__) || defined(__ANDROID__)
+#  if defined(__linux__) && !defined(__ANDROID__)
         n = getrandom(buf + off, len - off, 0);
 #  endif
         if (n <= 0) {
