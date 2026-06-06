@@ -68,7 +68,6 @@ build_android() {
         -DCMAKE_TOOLCHAIN_FILE="$ndk/build/cmake/android.toolchain.cmake" \
         -DANDROID_ABI="$abi" \
         -DANDROID_PLATFORM=android-24 \
-        -DCMAKE_C_FLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0" \
         -DCURL_ROOT="$prefix" \
         -DCURL_FO_MOBILE_BUILD=ON \
         "$@"

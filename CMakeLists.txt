@@ -93,13 +93,18 @@ set(CURL_FO_CORE_SOURCES
     src/curl_dispatch.c
     src/shim_ctx.c
 )
+if(ANDROID)
+    list(APPEND CURL_FO_CORE_SOURCES src/android_compat.c)
+endif()
 
 add_library(curl_fo SHARED ${CURL_FO_CORE_SOURCES})
 target_include_directories(curl_fo
     PUBLIC  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_compile_definitions(curl_fo PRIVATE CURL_FO_BUILDING)
-target_link_libraries(curl_fo PRIVATE CURL::libcurl)
+if(NOT ANDROID)
+    target_link_libraries(curl_fo PRIVATE CURL::libcurl)
+endif()
 set_target_properties(curl_fo PROPERTIES
     VERSION ${PROJECT_VERSION}
     SOVERSION 1
@@ -109,7 +114,6 @@ set_target_properties(curl_fo PROPERTIES
 if(WIN32)
     target_link_libraries(curl_fo PRIVATE ws2_32 iphlpapi)
 elseif(ANDROID)
-    target_compile_definitions(curl_fo PRIVATE _FORTIFY_SOURCE=0)
     target_link_libraries(curl_fo PRIVATE
         -Wl,--start-group
         CURL::libcurl
@@ -132,11 +136,12 @@ target_include_directories(curl_fo_static
     PUBLIC  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_compile_definitions(curl_fo_static PRIVATE CURL_FO_BUILDING)
-target_link_libraries(curl_fo_static PRIVATE CURL::libcurl)
+if(NOT ANDROID)
+    target_link_libraries(curl_fo_static PRIVATE CURL::libcurl)
+endif()
 if(WIN32)
     target_link_libraries(curl_fo_static PRIVATE ws2_32 iphlpapi)
 elseif(ANDROID)
-    target_compile_definitions(curl_fo_static PRIVATE _FORTIFY_SOURCE=0)
     target_link_libraries(curl_fo_static PRIVATE
         -Wl,--start-group
         CURL::libcurl
