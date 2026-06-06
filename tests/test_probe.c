@@ -6,7 +6,9 @@
 
 static unsigned test_round_bucket(unsigned ms, unsigned bucket)
 {
-    return ((ms + bucket - 1) / bucket) * bucket;
+    if (bucket == 0) bucket = 10;
+    unsigned rounded = ((ms + bucket - 1) / bucket) * bucket;
+    return rounded == 0 ? bucket : rounded;
 }
 
 int test_probe_run(void)

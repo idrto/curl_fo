@@ -11,11 +11,9 @@ int test_dns_run(void)
     if (rc == 0) {
         ASSERT(res.count >= 1);
         ASSERT(res.ttl_sec > 0);
-        cf_dns_result_free(&res);
-        memset(&res, 0, sizeof(res));
     }
-
     cf_dns_result_free(&res);
+
     rc = cf_dns_resolve("invalid.invalid.invalid.example", &res, 300);
     /* May fail on network — acceptable */
     cf_dns_result_free(&res);
