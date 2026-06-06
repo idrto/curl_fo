@@ -57,6 +57,7 @@ static int cf_dns_read_name(const uint8_t *pkt, size_t pktlen,
     size_t o = 0;
     int jumped = 0;
     size_t jump_back = 0;
+    unsigned jumps = 0;
 
     while (pos < pktlen) {
         uint8_t len = pkt[pos];
@@ -67,7 +68,9 @@ static int cf_dns_read_name(const uint8_t *pkt, size_t pktlen,
         }
         if ((len & 0xC0) == 0xC0) {
             if (pos + 1 >= pktlen) return -1;
+            if (++jumps > 16) return -1;
             size_t ptr = ((size_t)(len & 0x3F) << 8) | pkt[pos + 1];
+            if (ptr >= pktlen) return -1;
             if (!jumped) {
                 jump_back = pos + 2;
                 jumped = 1;
@@ -87,44 +90,101 @@ static int cf_dns_read_name(const uint8_t *pkt, size_t pktlen,
     return -1;
 }
 
-static int cf_get_system_dns(char *server, size_t serverlen)
+#define CF_DNS_MAX_SERVERS 3
+
+static size_t cf_get_system_dns(char servers[][64], size_t max_servers)
 {
+    size_t n = 0;
 #ifdef _WIN32
     FIXED_INFO *info = NULL;
     ULONG buflen = 0;
     if (GetNetworkParams(NULL, &buflen) == ERROR_BUFFER_OVERFLOW) {
         info = malloc(buflen);
         if (info && GetNetworkParams(info, &buflen) == NO_ERROR) {
-            strncpy(server, info->DnsServerList.IpAddress.String, serverlen - 1);
-            server[serverlen - 1] = '\0';
-            free(info);
-            if (server[0]) return 0;
+            for (IP_ADDR_STRING *p = &info->DnsServerList; p && n < max_servers; p = p->Next) {
+                if (p->IpAddress.String[0]) {
+                    strncpy(servers[n], p->IpAddress.String, 63);
+                    servers[n][63] = '\0';
+                    n++;
+                }
+            }
         }
         free(info);
     }
-    strncpy(server, "8.8.8.8", serverlen - 1);
-    return 0;
 #else
     FILE *f = fopen("/etc/resolv.conf", "r");
-    if (!f) {
-        strncpy(server, "8.8.8.8", serverlen - 1);
-        return 0;
-    }
-    char line[256];
-    while (fgets(line, sizeof(line), f)) {
-        char ip[64];
-        if (sscanf(line, " nameserver %63s", ip) == 1 ||
-            sscanf(line, "nameserver %63s", ip) == 1) {
-            strncpy(server, ip, serverlen - 1);
-            server[serverlen - 1] = '\0';
-            fclose(f);
-            return 0;
+    if (f) {
+        char line[256];
+        while (fgets(line, sizeof(line), f) && n < max_servers) {
+            char ip[64];
+            if (sscanf(line, " nameserver %63s", ip) == 1 ||
+                sscanf(line, "nameserver %63s", ip) == 1) {
+                strncpy(servers[n], ip, 63);
+                servers[n][63] = '\0';
+                n++;
+            }
         }
+        fclose(f);
     }
-    fclose(f);
-    strncpy(server, "8.8.8.8", serverlen - 1);
-    return 0;
 #endif
+    if (n == 0) {
+        strncpy(servers[0], "8.8.8.8", 63);
+        servers[0][63] = '\0';
+        n = 1;
+    }
+    return n;
+}
+
+static int cf_dns_udp_exchange(const char *server, const uint8_t *query, size_t qlen,
+                               uint8_t *resp, size_t resp_cap, int *truncated)
+{
+    struct addrinfo hints, *res = NULL;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_DGRAM;
+
+    if (getaddrinfo(server, "53", &hints, &res) != 0 || !res)
+        return -1;
+
+    int sock = (int)socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    if (sock < 0) {
+        freeaddrinfo(res);
+        return -1;
+    }
+
+#ifdef _WIN32
+    DWORD tv = 3000;
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof(tv));
+#else
+    struct timeval tv = {3, 0};
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+#endif
+
+    int sent = (int)sendto(sock, (const char *)query, (int)qlen, 0,
+                           res->ai_addr, (int)res->ai_addrlen);
+    if (sent < 0) {
+#ifdef _WIN32
+        closesocket(sock);
+#else
+        close(sock);
+#endif
+        freeaddrinfo(res);
+        return -1;
+    }
+
+    int rlen = (int)recvfrom(sock, (char *)resp, (int)resp_cap, 0, NULL, NULL);
+#ifdef _WIN32
+    closesocket(sock);
+#else
+    close(sock);
+#endif
+    freeaddrinfo(res);
+
+    if (rlen < 12)
+        return -1;
+    if (truncated)
+        *truncated = (resp[2] & 0x02) != 0;
+    return rlen;
 }
 
 static int cf_dns_query_type(const char *host, uint16_t qtype,
@@ -158,11 +218,11 @@ static int cf_dns_query_type(const char *host, uint16_t qtype,
     query[qlen++] = 0x00;
     query[qlen++] = 0x01;
 
-    char dns_server[64];
-    cf_get_system_dns(dns_server, sizeof(dns_server));
+    char dns_servers[CF_DNS_MAX_SERVERS][64];
+    size_t server_count = cf_get_system_dns(dns_servers, CF_DNS_MAX_SERVERS);
 
     const char *rtype = (qtype == 1) ? "A" : (qtype == 28) ? "AAAA" : "TYPE?";
-    cf_log_dns_query(cfg, host, rtype, dns_server, query, qlen, id);
+    cf_log_dns_query(cfg, host, rtype, dns_servers[0], query, qlen, id);
 
 #ifdef _WIN32
     static int wsa_init;
@@ -173,41 +233,27 @@ static int cf_dns_query_type(const char *host, uint16_t qtype,
     }
 #endif
 
-    int sock = (int)socket(AF_INET, SOCK_DGRAM, 0);
-    if (sock < 0) return -1;
+    uint8_t resp[1500];
+    int rlen = -1;
+    int truncated = 0;
 
-#ifdef _WIN32
-    DWORD tv = 3000;
-    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof(tv));
-#else
-    struct timeval tv = {3, 0};
-    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-#endif
-
-    struct sockaddr_in sa;
-    memset(&sa, 0, sizeof(sa));
-    sa.sin_family = AF_INET;
-    sa.sin_port = htons(53);
-    inet_pton(AF_INET, dns_server, &sa.sin_addr);
-
-    if (sendto(sock, (const char *)query, (int)qlen, 0,
-               (struct sockaddr *)&sa, sizeof(sa)) < 0) {
-#ifdef _WIN32
-        closesocket(sock);
-#else
-        close(sock);
-#endif
+    for (size_t si = 0; si < server_count && rlen < 0; si++) {
+        for (int attempt = 0; attempt < 2 && rlen < 0; attempt++) {
+            int tr = 0;
+            rlen = cf_dns_udp_exchange(dns_servers[si], query, qlen,
+                                       resp, sizeof(resp), &tr);
+            if (rlen >= 0) {
+                truncated = tr;
+                if (tr)
+                    rlen = -1;
+            }
+        }
+    }
+    if (rlen < 0) {
+        if (truncated)
+            cf_log_dns_fallback(cfg, host, "UDP response truncated");
         return -1;
     }
-
-    uint8_t resp[1500];
-    int rlen = (int)recvfrom(sock, (char *)resp, sizeof(resp), 0, NULL, NULL);
-#ifdef _WIN32
-    closesocket(sock);
-#else
-    close(sock);
-#endif
-    if (rlen < 12) return -1;
 
     uint16_t resp_id = (uint16_t)((resp[0] << 8) | resp[1]);
     if (resp_id != id) return -1;

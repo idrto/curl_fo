@@ -323,79 +323,147 @@ static int cf_entry_populate(cf_ctx *ctx, cf_dns_entry *entry)
     return 0;
 }
 
-/**
- * Resolve host:port into cache entry with ranks ready for failover.
- * Caller must release with cf_dns_entry_unref() when done.
- */
-cf_dns_entry *cf_resolve_host(cf_ctx *ctx, const char *host, uint16_t port)
+static void cf_snapshot_from_entry(cf_dns_entry *entry, cf_resolve_snapshot *snap)
 {
-    cf_mutex_lock(ctx->cache_mutex);
+    memset(snap, 0, sizeof(*snap));
+    snap->ok = 1;
+    snap->multi_ip = entry->multi_ip ? 1 : 0;
+    snap->all_count = entry->all_count;
+    snap->rank_count = entry->rank_count;
+    if (!entry->multi_ip && entry->all_count == 1 && entry->all_addrs[0])
+        strncpy(snap->single_ip, entry->all_addrs[0], sizeof(snap->single_ip) - 1);
+    for (size_t i = 0; i < entry->rank_count && i < CF_RESOLVE_MAX_IPS; i++)
+        strncpy(snap->ranks[i], entry->ranks[i].addr, sizeof(snap->ranks[i]) - 1);
+}
 
-    cf_dns_entry *entry = cf_cache_bucket_find(ctx, host, port);
-    uint64_t now = cf_now_ms();
-
-    if (entry) {
-        cf_vlog(ctx->cfg, "cache hit %s:%u (%zu IP(s), %zu ranked)\n",
-                host, port, entry->all_count, entry->rank_count);
-        if (now >= entry->expires_at_ms) {
-            cf_vlog(ctx->cfg, "TTL expired for %s:%u — refreshing\n", host, port);
-            int rc = cf_entry_refresh_ttl(ctx, entry);
-            if (rc == 1) {
-                cf_vlog(ctx->cfg, "top ranked IP gone — re-probing %s:%u\n", host, port);
-                free(entry->ranks);
-                entry->ranks = NULL;
-                entry->rank_count = 0;
-                cf_ip_rank *new_ranks = NULL;
-                size_t new_count = 0;
-                if (cf_probe_rank(entry->host, entry->port,
-                                  entry->all_addrs, entry->all_count,
-                                  ctx->cfg->latency_bucket_ms,
-                                  ctx->cfg->top_ips,
-                                  &new_ranks, &new_count, ctx->cfg) == 0) {
-                    entry->ranks = new_ranks;
-                    entry->rank_count = new_count;
-                    entry->probed = 1;
-                }
-            } else if (rc < 0) {
-                cf_mutex_unlock(ctx->cache_mutex);
-                return NULL;
-            }
-            entry->expires_at_ms = cf_now_ms() +
-                (uint64_t)entry->ttl_sec * 1000ULL;
-        }
-        cf_cache_touch(ctx, entry);
-        entry->refs++;
-        cf_mutex_unlock(ctx->cache_mutex);
-        return entry;
+static int cf_entry_reprobe(cf_ctx *ctx, cf_dns_entry *entry)
+{
+    free(entry->ranks);
+    entry->ranks = NULL;
+    entry->rank_count = 0;
+    cf_ip_rank *new_ranks = NULL;
+    size_t new_count = 0;
+    if (cf_probe_rank(entry->host, entry->port,
+                      entry->all_addrs, entry->all_count,
+                      ctx->cfg->latency_bucket_ms,
+                      ctx->cfg->top_ips,
+                      &new_ranks, &new_count, ctx->cfg) == 0) {
+        entry->ranks = new_ranks;
+        entry->rank_count = new_count;
+        entry->probed = 1;
+        return 0;
     }
+    return -1;
+}
 
-    cf_vlog(ctx->cfg, "cache miss %s:%u — resolving\n", host, port);
-
-    entry = cf_entry_create(host, port);
-    if (!entry) {
-        cf_mutex_unlock(ctx->cache_mutex);
-        return NULL;
+static int cf_entry_refresh_expired(cf_ctx *ctx, cf_dns_entry *entry)
+{
+    int rc = cf_entry_refresh_ttl(ctx, entry);
+    if (rc == 1) {
+        cf_vlog(ctx->cfg, "top ranked IP gone — re-probing %s:%u\n",
+                entry->host, entry->port);
+        if (cf_entry_reprobe(ctx, entry) < 0)
+            return -1;
+    } else if (rc < 0) {
+        return -1;
     }
+    entry->expires_at_ms = cf_now_ms() +
+        (uint64_t)entry->ttl_sec * 1000ULL;
+    return 0;
+}
 
-    if (cf_entry_populate(ctx, entry) < 0) {
-        cf_entry_free(entry);
-        cf_mutex_unlock(ctx->cache_mutex);
-        return NULL;
-    }
+static void cf_cache_insert_locked(cf_ctx *ctx, cf_dns_entry *entry)
+{
+    cf_dns_entry *existing = cf_cache_bucket_find(ctx, entry->host, entry->port);
+    if (existing)
+        cf_cache_remove(ctx, existing);
 
     while (ctx->entry_count >= ctx->cfg->lru_capacity && ctx->lru_tail)
         cf_cache_remove(ctx, ctx->lru_tail);
 
-    uint32_t h = cf_cache_key_hash(host, port);
+    uint32_t h = cf_cache_key_hash(entry->host, entry->port);
     size_t idx = h % ctx->bucket_count;
     entry->hash_next = ctx->buckets[idx];
     ctx->buckets[idx] = entry;
     cf_cache_link_head(ctx, entry);
     ctx->entry_count++;
+}
 
-    entry->refs++;
+/**
+ * Resolve host:port and copy ranked IPs into snap (safe after return).
+ * DNS/probe runs outside cache_mutex on miss/TTL refresh.
+ */
+int cf_resolve_snapshot(cf_ctx *ctx, const char *host, uint16_t port,
+                        cf_resolve_snapshot *snap)
+{
+    if (!ctx || !host || !snap)
+        return -1;
+    memset(snap, 0, sizeof(*snap));
+
+    cf_mutex_lock(ctx->cache_mutex);
+    cf_dns_entry *entry = cf_cache_bucket_find(ctx, host, port);
+    uint64_t now = cf_now_ms();
+
+    if (entry && now < entry->expires_at_ms) {
+        cf_vlog(ctx->cfg, "cache hit %s:%u (%zu IP(s), %zu ranked)\n",
+                host, port, entry->all_count, entry->rank_count);
+        cf_cache_touch(ctx, entry);
+        cf_snapshot_from_entry(entry, snap);
+        cf_mutex_unlock(ctx->cache_mutex);
+        return 0;
+    }
+
+    if (entry) {
+        if (entry->refreshing) {
+            cf_snapshot_from_entry(entry, snap);
+            cf_mutex_unlock(ctx->cache_mutex);
+            return 0;
+        }
+        entry->refreshing = true;
+        cf_mutex_unlock(ctx->cache_mutex);
+
+        cf_vlog(ctx->cfg, "TTL expired for %s:%u — refreshing\n", host, port);
+        int refresh_rc = cf_entry_refresh_expired(ctx, entry);
+
+        cf_mutex_lock(ctx->cache_mutex);
+        entry = cf_cache_bucket_find(ctx, host, port);
+        if (entry)
+            entry->refreshing = false;
+        if (refresh_rc < 0 || !entry) {
+            cf_mutex_unlock(ctx->cache_mutex);
+            return -1;
+        }
+        cf_cache_touch(ctx, entry);
+        cf_snapshot_from_entry(entry, snap);
+        cf_mutex_unlock(ctx->cache_mutex);
+        return 0;
+    }
+
     cf_mutex_unlock(ctx->cache_mutex);
-    return entry;
+    cf_vlog(ctx->cfg, "cache miss %s:%u — resolving\n", host, port);
+
+    cf_dns_entry *fresh = cf_entry_create(host, port);
+    if (!fresh)
+        return -1;
+    if (cf_entry_populate(ctx, fresh) < 0) {
+        cf_entry_free(fresh);
+        return -1;
+    }
+
+    cf_mutex_lock(ctx->cache_mutex);
+    entry = cf_cache_bucket_find(ctx, host, port);
+    if (entry) {
+        cf_entry_free(fresh);
+        cf_cache_touch(ctx, entry);
+        cf_snapshot_from_entry(entry, snap);
+        cf_mutex_unlock(ctx->cache_mutex);
+        return 0;
+    }
+
+    cf_cache_insert_locked(ctx, fresh);
+    cf_snapshot_from_entry(fresh, snap);
+    cf_mutex_unlock(ctx->cache_mutex);
+    return 0;
 }
 
 cf_ctx *cf_ctx_create_default(void)

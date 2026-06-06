@@ -4,6 +4,17 @@
 #include <stdlib.h>
 #include <string.h>
 
+static int cf_should_failover_cfg(cf_config *cfg, CURLcode code, long http_code)
+{
+    if (http_code > 0) {
+        if (cfg && cfg->failover_gateway &&
+            (http_code == 502 || http_code == 503 || http_code == 504))
+            return 1;
+        return 0;
+    }
+    return code != CURLE_OK;
+}
+
 static struct curl_slist *cf_append_idempotency_header(
     struct curl_slist *headers, const char *hdr_name, const char *uuid)
 {
@@ -102,8 +113,8 @@ CURLcode cf_easy_perform(cf_ctx *ctx, CURL *curl)
         return cf_curl_easy_perform(curl);
     }
 
-    cf_dns_entry *entry = cf_resolve_host(ctx, host, port);
-    if (!entry)
+    cf_resolve_snapshot snap;
+    if (cf_resolve_snapshot(ctx, host, port, &snap) < 0 || !snap.ok)
         return CURLE_COULDNT_RESOLVE_HOST;
 
     cf_method method = cf_shadow_get_method(curl);
@@ -111,58 +122,49 @@ CURLcode cf_easy_perform(cf_ctx *ctx, CURL *curl)
     cf_generate_uuid(req_id, sizeof(req_id));
     cf_vlog(cfg, "request id %s for idempotency header\n", req_id);
 
-    CURLcode rc = CURLE_OK;
-
-    if (!entry->multi_ip) {
-        if (entry->all_count == 1) {
-            cf_vlog(cfg, "chosen IP %s (only address)\n", entry->all_addrs[0]);
-            rc = cf_perform_with_ip(ctx, curl, host, port,
-                                    entry->all_addrs[0], req_id, method, 1, 1);
-            cf_dns_entry_unref(ctx, entry);
-            return rc;
+    if (!snap.multi_ip) {
+        if (snap.all_count == 1) {
+            cf_vlog(cfg, "chosen IP %s (only address)\n", snap.single_ip);
+            return cf_perform_with_ip(ctx, curl, host, port,
+                                      snap.single_ip, req_id, method, 1, 1);
         }
         cf_vlog(cfg, "multi-address host without ranking — passthrough\n");
-        rc = cf_curl_easy_perform(curl);
-        cf_dns_entry_unref(ctx, entry);
-        return rc;
+        return cf_curl_easy_perform(curl);
     }
 
     CURLcode last = CURLE_OK;
-    size_t attempts = entry->rank_count;
+    size_t attempts = snap.rank_count;
     if (attempts == 0) {
         cf_vlog(cfg, "no ranked IPs — passthrough\n");
-        rc = cf_curl_easy_perform(curl);
-        cf_dns_entry_unref(ctx, entry);
-        return rc;
+        return cf_curl_easy_perform(curl);
     }
 
     cf_vlog(cfg, "failover enabled — trying up to %zu ranked IP(s)\n", attempts);
 
     for (size_t i = 0; i < attempts; i++) {
         last = cf_perform_with_ip(ctx, curl, host, port,
-                                  entry->ranks[i].addr, req_id, method,
+                                  snap.ranks[i], req_id, method,
                                   i + 1, attempts);
         long http_code = 0;
         cf_curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
 
-        if (!cf_should_failover(last, http_code)) {
+        if (!cf_should_failover_cfg(cfg, last, http_code)) {
             cf_vlog(cfg, "using IP %s (attempt %zu succeeded)\n",
-                    entry->ranks[i].addr, i + 1);
-            cf_dns_entry_unref(ctx, entry);
+                    snap.ranks[i], i + 1);
             return last;
         }
 
         if (http_code > 0)
-            cf_vlog(cfg, "HTTP %ld received on %s — no failover\n",
-                    http_code, entry->ranks[i].addr);
+            cf_vlog(cfg, "HTTP %ld received on %s — %s\n",
+                    http_code, snap.ranks[i],
+                    cfg->failover_gateway ? "retrying next IP" : "no failover");
         else if (i + 1 < attempts)
             cf_vlog(cfg, "network error on %s — retrying next ranked IP\n",
-                    entry->ranks[i].addr);
+                    snap.ranks[i]);
     }
 
     cf_vlog(cfg, "all %zu ranked IP(s) failed — giving up (%s)\n",
             attempts, cf_curl_easy_strerror(last));
-    cf_dns_entry_unref(ctx, entry);
     return last;
 }
 

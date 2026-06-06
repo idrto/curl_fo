@@ -123,6 +123,22 @@ CF_SHIM_EXPORT CURLcode curl_easy_setopt(CURL *curl, CURLoption option, ...)
         }
         return real(curl, option, m);
     }
+    if (option == CURLOPT_PROXY) {
+        const char *proxy = va_arg(ap, const char *);
+        va_end(ap);
+        cf_shadow_set_proxy(curl, proxy);
+        return real(curl, option, proxy);
+    }
+    if (option == CURLOPT_VERBOSE || option == CURLOPT_FOLLOWLOCATION ||
+        option == CURLOPT_SSL_VERIFYPEER || option == CURLOPT_SSL_VERIFYHOST ||
+        option == CURLOPT_FAILONERROR || option == CURLOPT_CONNECT_ONLY ||
+        option == CURLOPT_PORT || option == CURLOPT_TIMEOUT ||
+        option == CURLOPT_CONNECTTIMEOUT || option == CURLOPT_TIMEOUT_MS ||
+        option == CURLOPT_CONNECTTIMEOUT_MS) {
+        long v = va_arg(ap, long);
+        va_end(ap);
+        return real(curl, option, v);
+    }
 
     /* Generic forward — pointer-sized argument (common shim pattern) */
     void *ptr = va_arg(ap, void *);

@@ -5,7 +5,7 @@ set -euo pipefail
 TRIPLE="${1:?triple required}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD="$ROOT/build-${TRIPLE}"
-VERSION="1.0.1"
+VERSION="1.0.2"
 TOOLCHAIN="$ROOT/cmake/vcpkg-init.cmake"
 OVERLAY="$ROOT/triplets"
 

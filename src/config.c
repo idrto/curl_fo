@@ -100,6 +100,17 @@ int cf_config_get_verbose(const cf_config *cfg)
     return cfg && cfg->verbose;
 }
 
+void cf_config_set_failover_gateway(cf_config *cfg, int on)
+{
+    if (cfg)
+        cfg->failover_gateway = on ? 1 : 0;
+}
+
+int cf_config_get_failover_gateway(const cf_config *cfg)
+{
+    return cfg && cfg->failover_gateway;
+}
+
 size_t cf_config_get_lru_capacity(const cf_config *cfg)
 {
     return cfg ? cfg->lru_capacity : CF_DEFAULT_LRU;
@@ -162,4 +173,7 @@ void cf_config_load_env(cf_config *cfg)
     const char *verb = getenv("CURL_FO_VERBOSE");
     if (verb && *verb && verb[0] != '0')
         cfg->verbose = 1;
+    const char *gw = getenv("CURL_FO_FAILOVER_GATEWAY");
+    if (gw && *gw && gw[0] != '0')
+        cfg->failover_gateway = 1;
 }

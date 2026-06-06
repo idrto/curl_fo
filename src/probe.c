@@ -28,111 +28,113 @@ static unsigned cf_round_bucket(unsigned ms, unsigned bucket)
     return rounded == 0 ? bucket : rounded;
 }
 
-static int cf_tcp_connect_latency(const char *addr, uint16_t port,
-                                    unsigned *raw_ms)
+static int cf_probe_timeout_ms(cf_config *cfg)
 {
+    long ms = cfg ? cf_config_get_connect_timeout_ms(cfg) : 3000L;
+    if (ms <= 0)
+        ms = 3000L;
+    if (ms > 60000L)
+        ms = 60000L;
+    return (int)ms;
+}
+
+typedef struct cf_probe_sock {
+    int              sock;
+    int              active;
+    char             addr[64];
+    struct addrinfo *ai;
+    uint64_t         start_ms;
+} cf_probe_sock;
+
+static void cf_probe_sock_close(cf_probe_sock *ps)
+{
+    if (!ps || ps->sock < 0)
+        return;
 #ifdef _WIN32
-    static int wsa_init;
-    if (!wsa_init) {
-        WSADATA wsa;
-        WSAStartup(MAKEWORD(2, 2), &wsa);
-        wsa_init = 1;
-    }
+    closesocket(ps->sock);
+#else
+    close(ps->sock);
 #endif
+    ps->sock = -1;
+}
+
+static int cf_probe_sock_start(cf_probe_sock *ps, const char *addr, uint16_t port)
+{
+    memset(ps, 0, sizeof(*ps));
+    ps->sock = -1;
+    strncpy(ps->addr, addr, sizeof(ps->addr) - 1);
 
     char portstr[8];
     snprintf(portstr, sizeof(portstr), "%u", port);
 
-    struct addrinfo hints, *res = NULL;
+    struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
 
-    if (getaddrinfo(addr, portstr, &hints, &res) != 0 || !res)
+    if (getaddrinfo(addr, portstr, &hints, &ps->ai) != 0 || !ps->ai)
         return -1;
 
-    int sock = (int)socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-    if (sock < 0) {
-        freeaddrinfo(res);
+    ps->sock = (int)socket(ps->ai->ai_family, ps->ai->ai_socktype, ps->ai->ai_protocol);
+    if (ps->sock < 0) {
+        freeaddrinfo(ps->ai);
+        ps->ai = NULL;
         return -1;
     }
 
 #ifdef _WIN32
     u_long nb = 1;
-    ioctlsocket(sock, FIONBIO, &nb);
+    ioctlsocket(ps->sock, FIONBIO, &nb);
 #else
-    int flags = fcntl(sock, F_GETFL, 0);
-    fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+    int flags = fcntl(ps->sock, F_GETFL, 0);
+    fcntl(ps->sock, F_SETFL, flags | O_NONBLOCK);
 #endif
 
-    uint64_t start = cf_now_ms();
-    int rc = connect(sock, res->ai_addr, (int)res->ai_addrlen);
+    ps->start_ms = cf_now_ms();
+    int rc = connect(ps->sock, ps->ai->ai_addr, (int)ps->ai->ai_addrlen);
 #ifdef _WIN32
     if (rc < 0 && WSAGetLastError() != WSAEWOULDBLOCK) {
-        closesocket(sock);
-        freeaddrinfo(res);
+        cf_probe_sock_close(ps);
+        freeaddrinfo(ps->ai);
+        ps->ai = NULL;
         return -1;
     }
 #else
     if (rc < 0 && errno != EINPROGRESS) {
-        close(sock);
-        freeaddrinfo(res);
+        cf_probe_sock_close(ps);
+        freeaddrinfo(ps->ai);
+        ps->ai = NULL;
         return -1;
     }
 #endif
+    ps->active = 1;
+    return 0;
+}
 
-    int prc;
-#ifdef _WIN32
-    WSAPOLLFD pfd;
-    pfd.fd = (SOCKET)sock;
-    pfd.events = POLLOUT;
-    pfd.revents = 0;
-    prc = WSAPoll(&pfd, 1, 3000);
-#else
-    struct pollfd pfd;
-    pfd.fd = sock;
-    pfd.events = POLLOUT;
-    prc = poll(&pfd, 1, 3000);
-#endif
-    uint64_t elapsed = cf_now_ms() - start;
-
-    if (prc <= 0) {
-#ifdef _WIN32
-        closesocket(sock);
-#else
-        close(sock);
-#endif
-        freeaddrinfo(res);
+static int cf_probe_sock_finish(cf_probe_sock *ps, unsigned *raw_ms)
+{
+    if (!ps->active || ps->sock < 0)
         return -1;
-    }
 
     int so_err = 0;
 #ifdef _WIN32
-    {
-        int slen = (int)sizeof(so_err);
-        if (getsockopt(sock, SOL_SOCKET, SO_ERROR, (char *)&so_err, &slen) != 0
-            || so_err != 0) {
-            closesocket(sock);
-            freeaddrinfo(res);
-            return -1;
-        }
-        closesocket(sock);
+    int slen = (int)sizeof(so_err);
+    if (getsockopt(ps->sock, SOL_SOCKET, SO_ERROR, (char *)&so_err, &slen) != 0
+        || so_err != 0) {
+        cf_probe_sock_close(ps);
+        return -1;
     }
 #else
-    {
-        socklen_t slen = (socklen_t)sizeof(so_err);
-        if (getsockopt(sock, SOL_SOCKET, SO_ERROR, &so_err, &slen) != 0
-            || so_err != 0) {
-            close(sock);
-            freeaddrinfo(res);
-            return -1;
-        }
-        close(sock);
+    socklen_t slen = (socklen_t)sizeof(so_err);
+    if (getsockopt(ps->sock, SOL_SOCKET, SO_ERROR, &so_err, &slen) != 0
+        || so_err != 0) {
+        cf_probe_sock_close(ps);
+        return -1;
     }
 #endif
-    freeaddrinfo(res);
 
-    *raw_ms = (unsigned)elapsed;
+    *raw_ms = (unsigned)(cf_now_ms() - ps->start_ms);
+    cf_probe_sock_close(ps);
     return 0;
 }
 
@@ -156,22 +158,141 @@ int cf_probe_rank(const char *host, uint16_t port,
 
     cf_log_probe_start(cfg, host, port, count, bucket_ms);
 
+#ifdef _WIN32
+    static int wsa_init;
+    if (!wsa_init) {
+        WSADATA wsa;
+        WSAStartup(MAKEWORD(2, 2), &wsa);
+        wsa_init = 1;
+    }
+#endif
+
+    int timeout_ms = cf_probe_timeout_ms(cfg);
+    cf_probe_sock *socks = calloc(count, sizeof(cf_probe_sock));
+    if (!socks)
+        return -1;
+
+    size_t started = 0;
+    for (size_t i = 0; i < count; i++) {
+        socks[i].sock = -1;
+        if (cf_probe_sock_start(&socks[i], addrs[i], port) == 0)
+            started++;
+    }
+
+    if (started == 0) {
+        free(socks);
+        return -1;
+    }
+
+    uint64_t deadline = cf_now_ms() + (uint64_t)timeout_ms;
+    while (started > 0 && cf_now_ms() < deadline) {
+        int wait = (int)(deadline - cf_now_ms());
+        if (wait <= 0)
+            break;
+
+        int prc = 0;
+#ifdef _WIN32
+        WSAPOLLFD *pfds = calloc(started, sizeof(WSAPOLLFD));
+        size_t nfds = 0;
+        for (size_t i = 0; i < count; i++) {
+            if (!socks[i].active || socks[i].sock < 0)
+                continue;
+            pfds[nfds].fd = (SOCKET)socks[i].sock;
+            pfds[nfds].events = POLLOUT;
+            pfds[nfds].revents = 0;
+            nfds++;
+        }
+        prc = nfds > 0 ? WSAPoll(pfds, (ULONG)nfds, wait) : 0;
+        if (prc > 0) {
+            size_t idx = 0;
+            for (size_t i = 0; i < count; i++) {
+                if (!socks[i].active || socks[i].sock < 0)
+                    continue;
+                if (pfds[idx].revents & (POLLERR | POLLHUP)) {
+                    cf_probe_sock_close(&socks[i]);
+                    socks[i].active = 0;
+                    started--;
+                } else if (pfds[idx].revents & POLLOUT) {
+                    unsigned raw = 0;
+                    if (cf_probe_sock_finish(&socks[i], &raw) == 0) {
+                        socks[i].active = 2; /* success marker */
+                        socks[i].start_ms = raw; /* reuse field */
+                    } else {
+                        socks[i].active = 0;
+                    }
+                    started--;
+                }
+                idx++;
+            }
+        }
+        free(pfds);
+#else
+        struct pollfd *pfds = calloc(started, sizeof(struct pollfd));
+        size_t nfds = 0;
+        for (size_t i = 0; i < count; i++) {
+            if (!socks[i].active || socks[i].sock < 0)
+                continue;
+            pfds[nfds].fd = socks[i].sock;
+            pfds[nfds].events = POLLOUT;
+            pfds[nfds].revents = 0;
+            nfds++;
+        }
+        prc = nfds > 0 ? poll(pfds, (nfds_t)nfds, wait) : 0;
+        if (prc > 0) {
+            size_t idx = 0;
+            for (size_t i = 0; i < count; i++) {
+                if (!socks[i].active || socks[i].sock < 0)
+                    continue;
+                if (pfds[idx].revents & (POLLERR | POLLHUP)) {
+                    cf_probe_sock_close(&socks[i]);
+                    socks[i].active = 0;
+                    started--;
+                } else if (pfds[idx].revents & POLLOUT) {
+                    unsigned raw = 0;
+                    if (cf_probe_sock_finish(&socks[i], &raw) == 0) {
+                        socks[i].active = 2;
+                        socks[i].start_ms = raw;
+                    } else {
+                        socks[i].active = 0;
+                    }
+                    started--;
+                }
+                idx++;
+            }
+        }
+        free(pfds);
+#endif
+
+        if (prc <= 0)
+            break;
+    }
+
     cf_ip_rank *ranks = calloc(count, sizeof(cf_ip_rank));
-    if (!ranks) return -1;
+    if (!ranks) {
+        for (size_t i = 0; i < count; i++) {
+            cf_probe_sock_close(&socks[i]);
+            freeaddrinfo(socks[i].ai);
+        }
+        free(socks);
+        return -1;
+    }
 
     size_t valid = 0;
     for (size_t i = 0; i < count; i++) {
-        unsigned raw = 0;
-        if (cf_tcp_connect_latency(addrs[i], port, &raw) < 0) {
+        if (socks[i].active == 2) {
+            unsigned raw = (unsigned)socks[i].start_ms;
+            cf_ip_rank *r = &ranks[valid++];
+            strncpy(r->addr, socks[i].addr, sizeof(r->addr) - 1);
+            r->raw_ms = raw;
+            r->bucket_ms = cf_round_bucket(raw, bucket_ms);
+            cf_log_probe_ip(cfg, socks[i].addr, 1, raw, r->bucket_ms);
+        } else {
             cf_log_probe_ip(cfg, addrs[i], 0, 0, 0);
-            continue;
+            cf_probe_sock_close(&socks[i]);
         }
-        cf_ip_rank *r = &ranks[valid++];
-        strncpy(r->addr, addrs[i], sizeof(r->addr) - 1);
-        r->raw_ms = raw;
-        r->bucket_ms = cf_round_bucket(raw, bucket_ms);
-        cf_log_probe_ip(cfg, addrs[i], 1, raw, r->bucket_ms);
+        freeaddrinfo(socks[i].ai);
     }
+    free(socks);
 
     if (valid == 0) {
         free(ranks);
@@ -180,7 +301,6 @@ int cf_probe_rank(const char *host, uint16_t port,
 
     qsort(ranks, valid, sizeof(cf_ip_rank), cf_rank_cmp);
 
-    /* Randomize within equal buckets */
     for (size_t i = 0; i < valid; ) {
         size_t j = i + 1;
         while (j < valid && ranks[j].bucket_ms == ranks[i].bucket_ms)

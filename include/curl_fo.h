@@ -34,8 +34,8 @@ extern "C" {
 
 #define CURL_FO_VERSION_MAJOR 1
 #define CURL_FO_VERSION_MINOR 0
-#define CURL_FO_VERSION_PATCH 1
-#define CURL_FO_VERSION_STRING "1.0.1"
+#define CURL_FO_VERSION_PATCH 2
+#define CURL_FO_VERSION_STRING "1.0.2"
 
 /* ── Error codes (library-specific, beyond CURLcode) ─────────────────── */
 
@@ -89,6 +89,9 @@ CF_EXPORT void cf_config_set_default_ttl_sec(cf_config *cfg, unsigned ttl_sec);
 /** Enable curl_fo activity logging to stderr (DNS, probe, failover, replay curl). */
 CF_EXPORT void cf_config_set_verbose(cf_config *cfg, int on);
 CF_EXPORT int  cf_config_get_verbose(const cf_config *cfg);
+/** Retry next ranked IP on HTTP 502/503/504 (off by default). */
+CF_EXPORT void cf_config_set_failover_gateway(cf_config *cfg, int on);
+CF_EXPORT int  cf_config_get_failover_gateway(const cf_config *cfg);
 
 CF_EXPORT size_t   cf_config_get_lru_capacity(const cf_config *cfg);
 CF_EXPORT size_t   cf_config_get_top_ips(const cf_config *cfg);
@@ -199,7 +202,8 @@ CF_EXPORT CURL *cf_ws_get_curl(cf_ws *ws);
  *   CURL_FO_LRU_SIZE, CURL_FO_TOP_IPS, CURL_FO_GET_TIMEOUT_MS,
  *   CURL_FO_OTHER_TIMEOUT_MS, CURL_FO_CONNECT_TIMEOUT_MS,
  *   CURL_FO_IDEMPOTENCY_HEADER, CURL_FO_LATENCY_BUCKET_MS,
- *   CURL_FO_DEFAULT_TTL_SEC, CURL_FO_LIBCURL_PATH
+ *   CURL_FO_DEFAULT_TTL_SEC, CURL_FO_VERBOSE, CURL_FO_FAILOVER_GATEWAY,
+ *   CURL_FO_LIBCURL_PATH
  */
 CF_EXPORT void cf_config_load_env(cf_config *cfg);
 

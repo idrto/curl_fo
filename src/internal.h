@@ -34,6 +34,7 @@ typedef struct cf_dns_entry {
     uint64_t       expires_at_ms;
     unsigned       refs;        /* in-flight users; entry freed when 0 and evicted */
     bool           evicted;     /* unlinked from cache, pending free on last unref */
+    bool           refreshing;  /* TTL refresh in progress */
     /* LRU + hash linkage */
     struct cf_dns_entry *lru_prev;
     struct cf_dns_entry *lru_next;
@@ -52,7 +53,19 @@ struct cf_config {
     unsigned latency_bucket_ms;
     unsigned default_ttl_sec;
     int      verbose;
+    int      failover_gateway;  /* retry on HTTP 502/503/504 */
 };
+
+#define CF_RESOLVE_MAX_IPS 16
+
+typedef struct cf_resolve_snapshot {
+    int      ok;
+    int      multi_ip;
+    size_t   rank_count;
+    char     ranks[CF_RESOLVE_MAX_IPS][64];
+    char     single_ip[64];
+    size_t   all_count;
+} cf_resolve_snapshot;
 
 /* ── DNS resolution result ───────────────────────────────────────────── */
 
@@ -88,8 +101,9 @@ cf_dns_entry *cf_cache_lookup(cf_ctx *ctx, const char *host, uint16_t port);
 void          cf_cache_insert(cf_ctx *ctx, cf_dns_entry *entry);
 void          cf_cache_remove(cf_ctx *ctx, cf_dns_entry *entry);
 void          cf_cache_touch(cf_ctx *ctx, cf_dns_entry *entry);
-cf_dns_entry *cf_resolve_host(cf_ctx *ctx, const char *host, uint16_t port);
-void          cf_dns_entry_unref(cf_ctx *ctx, cf_dns_entry *entry);
+int cf_resolve_snapshot(cf_ctx *ctx, const char *host, uint16_t port,
+                        cf_resolve_snapshot *snap);
+void cf_dns_entry_unref(cf_ctx *ctx, cf_dns_entry *entry);
 
 /* ── Probe ───────────────────────────────────────────────────────────── */
 

@@ -18,5 +18,11 @@ int test_failover_run(void)
     /* libcurl error but HTTP code received (edge) */
     ASSERT(cf_should_failover(CURLE_RECV_ERROR, 500) == 0);
 
+    cf_config *cfg = cf_config_create();
+    ASSERT(cfg != NULL);
+    cf_config_set_failover_gateway(cfg, 1);
+    ASSERT(cf_config_get_failover_gateway(cfg) == 1);
+    cf_config_destroy(cfg);
+
     return 0;
 }

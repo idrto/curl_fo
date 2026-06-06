@@ -124,6 +124,22 @@ CF_EXPORT CURLcode curl_easy_setopt(CURL *curl, CURLoption option, ...)
         if (v) cf_shadow_set_method(curl, CF_METHOD_HEAD);
         return real ? real(curl, option, v) : CURLE_BAD_FUNCTION_ARGUMENT;
     }
+    if (option == CURLOPT_PROXY) {
+        const char *proxy = va_arg(ap, const char *);
+        va_end(ap);
+        cf_shadow_set_proxy(curl, proxy);
+        return real ? real(curl, option, proxy) : CURLE_BAD_FUNCTION_ARGUMENT;
+    }
+    if (option == CURLOPT_VERBOSE || option == CURLOPT_FOLLOWLOCATION ||
+        option == CURLOPT_SSL_VERIFYPEER || option == CURLOPT_SSL_VERIFYHOST ||
+        option == CURLOPT_FAILONERROR || option == CURLOPT_CONNECT_ONLY ||
+        option == CURLOPT_PORT || option == CURLOPT_TIMEOUT ||
+        option == CURLOPT_CONNECTTIMEOUT || option == CURLOPT_TIMEOUT_MS ||
+        option == CURLOPT_CONNECTTIMEOUT_MS) {
+        long v = va_arg(ap, long);
+        va_end(ap);
+        return real ? real(curl, option, v) : CURLE_BAD_FUNCTION_ARGUMENT;
+    }
     void *ptr = va_arg(ap, void *);
     va_end(ap);
     return real ? real(curl, option, ptr) : CURLE_BAD_FUNCTION_ARGUMENT;

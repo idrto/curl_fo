@@ -4,15 +4,15 @@
 #include <string.h>
 
 struct cf_ws {
-    cf_ctx        *ctx;
-    CURL          *curl;
-    char           host[256];
-    uint16_t       port;
-    char           url[4096];
-    cf_dns_entry  *entry;
-    size_t         current_ip;
-    int            retry_same;
-    int            connected;
+    cf_ctx               *ctx;
+    CURL                 *curl;
+    char                  host[256];
+    uint16_t              port;
+    char                  url[4096];
+    cf_resolve_snapshot   snap;
+    size_t                current_ip;
+    int                   retry_same;
+    int                   connected;
 };
 
 static int cf_ws_has_websockets(void)
@@ -23,10 +23,10 @@ static int cf_ws_has_websockets(void)
 
 static CURLcode cf_ws_try_connect(cf_ws *ws, size_t ip_index, const char *phase)
 {
-    if (!ws->entry || ip_index >= ws->entry->rank_count)
+    if (ip_index >= ws->snap.rank_count)
         return CURLE_COULDNT_CONNECT;
 
-    const char *ip = ws->entry->ranks[ip_index].addr;
+    const char *ip = ws->snap.ranks[ip_index];
     cf_config *cfg = ws->ctx->cfg;
 
     cf_vlog(cfg, "WebSocket %s connect attempt #%zu to %s (rank index %zu)\n",
@@ -73,21 +73,18 @@ cf_ws *cf_ws_connect(cf_ctx *ctx, const char *url)
 
     cf_vlog(ctx->cfg, "WebSocket connect %s\n", url);
 
-    cf_dns_entry *entry = cf_resolve_host(ctx, host, port);
-    if (!entry)
+    cf_resolve_snapshot snap;
+    if (cf_resolve_snapshot(ctx, host, port, &snap) < 0 || !snap.ok)
         return NULL;
 
     cf_ws *ws = calloc(1, sizeof(cf_ws));
-    if (!ws) {
-        cf_dns_entry_unref(ctx, entry);
+    if (!ws)
         return NULL;
-    }
 
     ws->ctx = ctx;
-    ws->entry = entry;
+    ws->snap = snap;
     ws->curl = cf_curl_easy_init();
     if (!ws->curl) {
-        cf_dns_entry_unref(ctx, entry);
         free(ws);
         return NULL;
     }
@@ -98,12 +95,12 @@ cf_ws *cf_ws_connect(cf_ctx *ctx, const char *url)
     ws->current_ip = 0;
     ws->retry_same = 0;
 
-    if (!entry->multi_ip && entry->all_count == 1) {
-        cf_vlog(ctx->cfg, "WebSocket single IP %s\n", entry->all_addrs[0]);
+    if (!snap.multi_ip && snap.all_count == 1) {
+        cf_vlog(ctx->cfg, "WebSocket single IP %s\n", snap.single_ip);
         char resolve_entry[320];
         snprintf(resolve_entry, sizeof(resolve_entry), "%s:%u:%s",
-                 host, port, entry->all_addrs[0]);
-        cf_log_curl_replay(ctx->cfg, ws->curl, host, port, entry->all_addrs[0],
+                 host, port, snap.single_ip);
+        cf_log_curl_replay(ctx->cfg, ws->curl, host, port, snap.single_ip,
                            "(ws-connect)", CF_METHOD_OTHER,
                            cf_config_get_other_timeout_ms(ctx->cfg),
                            cf_config_get_connect_timeout_ms(ctx->cfg), 1);
@@ -120,12 +117,12 @@ cf_ws *cf_ws_connect(cf_ctx *ctx, const char *url)
             return NULL;
         }
         ws->connected = 1;
-        cf_vlog(ctx->cfg, "WebSocket connected on %s\n", entry->all_addrs[0]);
+        cf_vlog(ctx->cfg, "WebSocket connected on %s\n", snap.single_ip);
         return ws;
     }
 
     CURLcode rc = CURLE_COULDNT_CONNECT;
-    size_t attempts = entry->rank_count;
+    size_t attempts = snap.rank_count;
     if (attempts == 0)
         attempts = 1;
 
@@ -134,20 +131,20 @@ cf_ws *cf_ws_connect(cf_ctx *ctx, const char *url)
 
     if (rc != CURLE_OK) {
         cf_vlog(ctx->cfg, "WebSocket: all %zu ranked IP(s) failed — giving up\n",
-                entry->rank_count);
+                snap.rank_count);
         cf_ws_close(ws);
         return NULL;
     }
 
     ws->connected = 1;
     cf_vlog(ctx->cfg, "WebSocket connected on %s (rank #%zu)\n",
-            entry->ranks[ws->current_ip].addr, ws->current_ip + 1);
+            ws->snap.ranks[ws->current_ip], ws->current_ip + 1);
     return ws;
 }
 
 static CURLcode cf_ws_reconnect(cf_ws *ws)
 {
-    if (!ws->entry || !ws->entry->multi_ip)
+    if (!ws->snap.multi_ip)
         return CURLE_OK;
 
     cf_config *cfg = ws->ctx->cfg;
@@ -155,19 +152,19 @@ static CURLcode cf_ws_reconnect(cf_ws *ws)
     if (!ws->retry_same) {
         ws->retry_same = 1;
         cf_vlog(cfg, "WebSocket broken — re-attempting same IP %s\n",
-                ws->entry->ranks[ws->current_ip].addr);
+                ws->snap.ranks[ws->current_ip]);
         return cf_ws_try_connect(ws, ws->current_ip, "reconnect-same");
     }
 
     ws->retry_same = 0;
     ws->current_ip++;
-    if (ws->current_ip >= ws->entry->rank_count) {
+    if (ws->current_ip >= ws->snap.rank_count) {
         cf_vlog(cfg, "WebSocket: no more ranked IPs after reconnect failures\n");
         return CURLE_COULDNT_CONNECT;
     }
 
     cf_vlog(cfg, "WebSocket broken — trying next ranked IP %s (#%zu)\n",
-            ws->entry->ranks[ws->current_ip].addr, ws->current_ip + 1);
+            ws->snap.ranks[ws->current_ip], ws->current_ip + 1);
     CURLcode rc = cf_ws_try_connect(ws, ws->current_ip, "reconnect-next");
     if (rc == CURLE_OK)
         ws->connected = 1;
@@ -218,8 +215,6 @@ void cf_ws_close(cf_ws *ws)
     if (!ws) return;
     if (ws->curl)
         cf_curl_easy_cleanup(ws->curl);
-    if (ws->entry)
-        cf_dns_entry_unref(ws->ctx, ws->entry);
     free(ws);
 }
 
